@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-multi-port-deployment
+  namespace: userX-namespace
+  labels:
+    app: multi-port
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-port
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: multi-port
+        owner: userX
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+          name: http
+        - containerPort: 8080
+          name: status
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          cat > /etc/nginx/conf.d/status.conf << 'EOF'
+          server {
+              listen 8080;
+              location /status {
+                  return 200 "OK from $(hostname)\n";
+                  add_header Content-Type text/plain;
+              }
+          }
+          EOF
+          nginx -g 'daemon off;'

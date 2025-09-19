@@ -1,0 +1,103 @@
+# Default values for userX-microservices chart
+# Replace userX with your assigned user number
+
+# Global values
+global:
+  namespace: userX-namespace
+  userPrefix: userX
+
+# Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  service:
+    type: ClusterIP
+    port: 6379
+
+# NodeJS backend configuration
+nodejs:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: node
+    tag: "18-alpine"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 3000
+  env:
+    REDIS_HOST: userX-redis-service
+    REDIS_PORT: "6379"
+    NODE_ENV: production
+
+# Crystal backend configuration
+crystal:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: crystallang/crystal
+    tag: "1.9-alpine"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 3000
+
+# Frontend configuration
+frontend:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: nginx
+    tag: "1.25-alpine"
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  service:
+    type: LoadBalancer
+    port: 80
+  configMap:
+    enabled: true
+    data:
+      backend_nodejs_url: "http://userX-nodejs-service:3000"
+      backend_crystal_url: "http://userX-crystal-service:3000"
+
+# Security context
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  fsGroup: 65534
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+
+# Service account
+serviceAccount:
+  create: true
+  name: userX-microservices

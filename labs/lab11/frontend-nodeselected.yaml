@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-frontend-nodeselected
+  namespace: userX-namespace
+  labels:
+    app: frontend-nodeselected
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend-nodeselected
+  template:
+    metadata:
+      labels:
+        app: frontend-nodeselected
+    spec:
+      nodeSelector:
+        workload-type: frontend
+      containers:
+      - name: frontend
+        image: nginx:1.25-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

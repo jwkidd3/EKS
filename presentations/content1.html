@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.css">
+    <style>
+        .reveal { font-size: 28px; }
+        .reveal h1 { font-size: 2.2em; color: #2c3e50; }
+        .reveal h2 { font-size: 1.8em; color: #2c3e50; }
+        .reveal h3 { font-size: 1.4em; color: #2c3e50; }
+        .reveal .slides section { text-align: left; }
+        .reveal .slides section.center { text-align: center; }
+        .lab-callout { background: #3498db; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .code-block { background: #f8f9fa; padding: 10px; border-left: 4px solid #007cba; font-family: monospace; font-size: 0.65em; line-height: 1.2; }
+        .architecture-diagram { text-align: center; margin: 15px 0; }
+        .key-point { background: #e8f5e8; padding: 8px; border-left: 4px solid #27ae60; margin: 8px 0; }
+        .warning { background: #fdf2e9; padding: 8px; border-left: 4px solid #e67e22; margin: 8px 0; }
+        .small { font-size: 0.75em; }
+        .smaller { font-size: 0.65em; }
+        .reveal ul { margin: 0.5em 0; }
+        .reveal li { margin: 0.3em 0; }
+        .reveal p { margin: 0.5em 0; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title Slide -->
+            <section class="center">
+                <h1>Amazon EKS Training</h1>
+                <h2>Day 1: Foundations and Basic Operations</h2>
+                <p>Kubernetes Fundamentals on Amazon EKS</p>
+                <div class="small">
+                    <p>Instructor-Led Training</p>
+                    <p>Duration: 8 hours (including labs)</p>
+                </div>
+            </section>
+
+            <!-- Agenda -->
+            <section>
+                <h2>Day 1 Agenda</h2>
+                <ul>
+                    <li><strong>Module 1:</strong> Kubernetes and EKS Fundamentals</li>
+                    <li><strong>Lab 1:</strong> Exploring the Shared EKS Cluster</li>
+                    <li><strong>Lab 2:</strong> Working with Pods and Basic Objects</li>
+                    <li><strong>Lab 3:</strong> Services and Application Exposure</li>
+                    <li><strong>Lab 4:</strong> Deployments and ReplicaSets</li>
+                </ul>
+                <div class="key-point">
+                    <strong>Learning Focus:</strong> Understanding core Kubernetes concepts and EKS cluster operations
+                </div>
+            </section>
+
+            <!-- What is Kubernetes? -->
+            <section>
+                <h2>What is Kubernetes?</h2>
+                <ul>
+                    <li><strong>Container Orchestration Platform</strong>
+                        <ul class="smaller">
+                            <li>Automates deployment, scaling, and management</li>
+                            <li>Originally developed by Google</li>
+                            <li>Now maintained by Cloud Native Computing Foundation (CNCF)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Production-Ready</strong>
+                        <ul class="smaller">
+                            <li>Self-healing applications</li>
+                            <li>Load balancing and service discovery</li>
+                            <li>Automated rollouts and rollbacks</li>
+                        </ul>
+                    </li>
+                    <li><strong>Declarative Configuration</strong>
+                        <ul class="smaller">
+                            <li>Describe desired state in YAML/JSON</li>
+                            <li>Kubernetes maintains the desired state</li>
+                            <li>Infrastructure as Code principles</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Kubernetes Architecture -->
+            <section>
+                <h2>Kubernetes Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block">
+┌─────────────────────────────────────────────────────────┐
+│                   Control Plane                        │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │
+│  │  API Server │ │    etcd     │ │  Scheduler  │      │
+│  └─────────────┘ └─────────────┘ └─────────────┘      │
+│  ┌─────────────┐ ┌─────────────┐                       │
+│  │ Controller  │ │ Cloud Ctrl  │                       │
+│  │   Manager   │ │   Manager   │                       │
+│  └─────────────┘ └─────────────┘                       │
+└─────────────────────────────────────────────────────────┘
+           │                    │                    │
+┌──────────▼──────────┐ ┌───────▼───────┐ ┌─────────▼────────┐
+│    Worker Node 1    │ │ Worker Node 2 │ │  Worker Node 3   │
+│  ┌───────────────┐  │ │ ┌───────────┐ │ │ ┌──────────────┐ │
+│  │    kubelet    │  │ │ │  kubelet  │ │ │ │   kubelet    │ │
+│  │ ┌───────────┐ │  │ │ │┌─────────┐│ │ │ │┌────────────┐│ │
+│  │ │    Pod    │ │  │ │ ││   Pod   ││ │ │ ││    Pod     ││ │
+│  │ └───────────┘ │  │ │ │└─────────┘│ │ │ │└────────────┘│ │
+│  └───────────────┘  │ │ └───────────┘ │ │ └──────────────┘ │
+└─────────────────────┘ └───────────────┘ └──────────────────┘
+                    </div>
+                </div>
+            </section>
+
+            <!-- Control Plane Components -->
+            <section>
+                <h2>Control Plane Components</h2>
+                <ul>
+                    <li><strong>API Server</strong>
+                        <ul class="smaller">
+                            <li>Central management hub</li>
+                            <li>REST API for all operations</li>
+                            <li>Authentication and authorization</li>
+                        </ul>
+                    </li>
+                    <li><strong>etcd</strong>
+                        <ul class="smaller">
+                            <li>Distributed key-value store</li>
+                            <li>Cluster state and configuration</li>
+                            <li>Highly available and consistent</li>
+                        </ul>
+                    </li>
+                    <li><strong>Scheduler</strong>
+                        <ul class="smaller">
+                            <li>Assigns pods to nodes</li>
+                            <li>Resource optimization</li>
+                            <li>Affinity and anti-affinity rules</li>
+                        </ul>
+                    </li>
+                    <li><strong>Controller Manager</strong>
+                        <ul class="smaller">
+                            <li>Maintains desired state</li>
+                            <li>Node, replication, endpoint controllers</li>
+                            <li>Continuous reconciliation loops</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Worker Node Components -->
+            <section>
+                <h2>Worker Node Components</h2>
+                <ul>
+                    <li><strong>kubelet</strong>
+                        <ul class="smaller">
+                            <li>Node agent that manages pods</li>
+                            <li>Communicates with API server</li>
+                            <li>Pod lifecycle management</li>
+                        </ul>
+                    </li>
+                    <li><strong>kube-proxy</strong>
+                        <ul class="smaller">
+                            <li>Network proxy and load balancer</li>
+                            <li>Implements service networking</li>
+                            <li>iptables or IPVS rules</li>
+                        </ul>
+                    </li>
+                    <li><strong>Container Runtime</strong>
+                        <ul class="smaller">
+                            <li>Docker, containerd, or CRI-O</li>
+                            <li>Container lifecycle management</li>
+                            <li>Image pulling and storage</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Kubernetes Objects -->
+            <section>
+                <h2>Core Kubernetes Objects</h2>
+                <ul>
+                    <li><strong>Pod</strong>
+                        <ul class="smaller">
+                            <li>Smallest deployable unit</li>
+                            <li>One or more containers with shared network/storage</li>
+                            <li>Ephemeral and disposable</li>
+                        </ul>
+                    </li>
+                    <li><strong>Service</strong>
+                        <ul class="smaller">
+                            <li>Stable network endpoint for pods</li>
+                            <li>Load balancing and service discovery</li>
+                            <li>ClusterIP, NodePort, LoadBalancer types</li>
+                        </ul>
+                    </li>
+                    <li><strong>Deployment</strong>
+                        <ul class="smaller">
+                            <li>Manages replica sets and pods</li>
+                            <li>Rolling updates and rollbacks</li>
+                            <li>Declarative updates</li>
+                        </ul>
+                    </li>
+                    <li><strong>Namespace</strong>
+                        <ul class="smaller">
+                            <li>Virtual clusters within physical cluster</li>
+                            <li>Resource isolation and organization</li>
+                            <li>RBAC and resource quotas</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Pod Deep Dive -->
+            <section>
+                <h2>Pod Deep Dive</h2>
+                <div class="code-block">
+apiVersion: v1
+kind: Pod
+metadata:
+  name: example-pod
+  labels:
+    app: web
+spec:
+  containers:
+  - name: web-server
+    image: nginx:1.21
+    ports:
+    - containerPort: 80
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+                </div>
+                <div class="key-point">
+                    <strong>Key Characteristics:</strong>
+                    <ul class="smaller">
+                        <li>Shared network (IP address)</li>
+                        <li>Shared storage volumes</li>
+                        <li>Scheduled as a unit</li>
+                        <li>Scaled as a unit</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Pod Lifecycle -->
+            <section>
+                <h2>Pod Lifecycle</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block">
+                Pending → Running → Succeeded/Failed
+                    ↓         ↓           ↓
+                Scheduled   Ready      Terminated
+                    </div>
+                </div>
+                <ul>
+                    <li><strong>Pending:</strong> Accepted but not scheduled/running</li>
+                    <li><strong>Running:</strong> Bound to node, at least one container running</li>
+                    <li><strong>Succeeded:</strong> All containers terminated successfully</li>
+                    <li><strong>Failed:</strong> All containers terminated, at least one failed</li>
+                    <li><strong>Unknown:</strong> Pod state cannot be determined</li>
+                </ul>
+            </section>
+
+            <!-- Services Overview -->
+            <section>
+                <h2>Services Overview</h2>
+                <ul>
+                    <li><strong>ClusterIP (Default)</strong>
+                        <ul class="smaller">
+                            <li>Internal cluster access only</li>
+                            <li>Virtual IP within cluster</li>
+                            <li>Used for internal communication</li>
+                        </ul>
+                    </li>
+                    <li><strong>NodePort</strong>
+                        <ul class="smaller">
+                            <li>Exposes service on each node's IP</li>
+                            <li>Port range: 30000-32767</li>
+                            <li>External access through any node</li>
+                        </ul>
+                    </li>
+                    <li><strong>LoadBalancer</strong>
+                        <ul class="smaller">
+                            <li>Cloud provider's load balancer</li>
+                            <li>External IP address</li>
+                            <li>Automatic health checks</li>
+                        </ul>
+                    </li>
+                    <li><strong>ExternalName</strong>
+                        <ul class="smaller">
+                            <li>Maps to external DNS name</li>
+                            <li>CNAME record</li>
+                            <li>No proxying involved</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Service Discovery -->
+            <section>
+                <h2>Service Discovery</h2>
+                <div class="code-block">
+# DNS-based service discovery
+my-service.my-namespace.svc.cluster.local
+
+# Environment variables (legacy)
+MY_SERVICE_SERVICE_HOST
+MY_SERVICE_SERVICE_PORT
+                </div>
+                <ul>
+                    <li><strong>DNS (Recommended)</strong>
+                        <ul class="smaller">
+                            <li>CoreDNS provides cluster DNS</li>
+                            <li>Automatic DNS entries for services</li>
+                            <li>Cross-namespace resolution</li>
+                        </ul>
+                    </li>
+                    <li><strong>Environment Variables</strong>
+                        <ul class="smaller">
+                            <li>Injected into pods at creation</li>
+                            <li>Service must exist before pod</li>
+                            <li>Legacy approach</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Deployments and ReplicaSets -->
+            <section>
+                <h2>Deployments and ReplicaSets</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block">
+        Deployment
+            │
+            ▼
+        ReplicaSet ──────► ReplicaSet (old)
+            │
+            ▼
+      Pod   Pod   Pod
+                    </div>
+                </div>
+                <ul>
+                    <li><strong>Deployment</strong>
+                        <ul class="smaller">
+                            <li>Declarative updates for pods and ReplicaSets</li>
+                            <li>Rolling updates and rollbacks</li>
+                            <li>Deployment strategies</li>
+                        </ul>
+                    </li>
+                    <li><strong>ReplicaSet</strong>
+                        <ul class="smaller">
+                            <li>Ensures specified number of pod replicas</li>
+                            <li>Selector-based pod management</li>
+                            <li>Self-healing capabilities</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Deployment Strategies -->
+            <section>
+                <h2>Deployment Strategies</h2>
+                <ul>
+                    <li><strong>Rolling Update (Default)</strong>
+                        <ul class="smaller">
+                            <li>Gradual replacement of old pods</li>
+                            <li>Zero-downtime deployments</li>
+                            <li>Configurable maxSurge and maxUnavailable</li>
+                        </ul>
+                    </li>
+                    <li><strong>Recreate</strong>
+                        <ul class="smaller">
+                            <li>Terminate all old pods first</li>
+                            <li>Then create new pods</li>
+                            <li>Causes brief downtime</li>
+                        </ul>
+                    </li>
+                </ul>
+                <div class="code-block smaller">
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+                </div>
+            </section>
+
+            <!-- Amazon EKS Overview -->
+            <section>
+                <h2>Amazon EKS Overview</h2>
+                <ul>
+                    <li><strong>Managed Kubernetes Service</strong>
+                        <ul class="smaller">
+                            <li>AWS manages the control plane</li>
+                            <li>Automatic updates and patching</li>
+                            <li>High availability across AZs</li>
+                        </ul>
+                    </li>
+                    <li><strong>AWS Integration</strong>
+                        <ul class="smaller">
+                            <li>IAM for authentication</li>
+                            <li>VPC for networking</li>
+                            <li>EBS/EFS for storage</li>
+                            <li>CloudWatch for monitoring</li>
+                        </ul>
+                    </li>
+                    <li><strong>Compliance and Security</strong>
+                        <ul class="smaller">
+                            <li>SOC, PCI, ISO certifications</li>
+                            <li>FIPS 140-2 Level 2</li>
+                            <li>Network and pod security</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- EKS Architecture -->
+            <section>
+                <h2>EKS Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+┌─────────────────────────────────────────────────────────┐
+│                    AWS Cloud                           │
+│  ┌─────────────────────────────────────────────────┐    │
+│  │               EKS Control Plane                │    │
+│  │        (Managed by AWS)                        │    │
+│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐          │    │
+│  │  │   AZ1   │ │   AZ2   │ │   AZ3   │          │    │
+│  │  │API Svr  │ │API Svr  │ │API Svr  │          │    │
+│  │  │  etcd   │ │  etcd   │ │  etcd   │          │    │
+│  │  └─────────┘ └─────────┘ └─────────┘          │    │
+│  └─────────────────────────────────────────────────┘    │
+│           │              │              │               │
+│  ┌────────▼──────┐ ┌─────▼─────┐ ┌──────▼──────┐        │
+│  │  Worker Node  │ │Worker Node│ │ Worker Node │        │
+│  │   (EC2/Fargate)│ │(EC2/Fargate)│ │(EC2/Fargate)│       │
+│  │  ┌─────────┐  │ │ ┌───────┐ │ │ ┌─────────┐ │        │
+│  │  │  Pods   │  │ │ │ Pods  │ │ │ │  Pods   │ │        │
+│  │  └─────────┘  │ │ └───────┘ │ │ └─────────┘ │        │
+│  └───────────────┘ └───────────┘ └─────────────┘        │
+└─────────────────────────────────────────────────────────┘
+                    </div>
+                </div>
+            </section>
+
+            <!-- EKS Node Groups -->
+            <section>
+                <h2>EKS Node Groups</h2>
+                <ul>
+                    <li><strong>Managed Node Groups</strong>
+                        <ul class="smaller">
+                            <li>AWS manages EC2 instances</li>
+                            <li>Automatic updates and patching</li>
+                            <li>Auto Scaling integration</li>
+                            <li>Spot instance support</li>
+                        </ul>
+                    </li>
+                    <li><strong>Self-Managed Nodes</strong>
+                        <ul class="smaller">
+                            <li>User manages EC2 instances</li>
+                            <li>Full control over configuration</li>
+                            <li>Custom AMIs and user data</li>
+                        </ul>
+                    </li>
+                    <li><strong>AWS Fargate</strong>
+                        <ul class="smaller">
+                            <li>Serverless compute for pods</li>
+                            <li>No node management required</li>
+                            <li>Pay per pod resource usage</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Lab 1 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 1: Exploring the Shared EKS Cluster</h2>
+                    <h3>Duration: 30 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Connect to shared EKS cluster using kubectl</li>
+                        <li>Explore existing cluster components</li>
+                        <li>Create personal namespace (userX-namespace)</li>
+                        <li>Verify cluster access and basic commands</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> kubectl basics, namespace management, cluster exploration</p>
+                </div>
+            </section>
+
+            <!-- Labels and Selectors -->
+            <section>
+                <h2>Labels and Selectors</h2>
+                <div class="code-block smaller">
+# Labels (key-value pairs)
+metadata:
+  labels:
+    app: frontend
+    version: v1.2
+    environment: production
+
+# Label Selector
+selector:
+  matchLabels:
+    app: frontend
+    version: v1.2
+                </div>
+                <ul>
+                    <li><strong>Labels</strong>
+                        <ul class="smaller">
+                            <li>Metadata attached to objects</li>
+                            <li>Used for organization and selection</li>
+                            <li>Not unique (multiple objects can have same labels)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Selectors</strong>
+                        <ul class="smaller">
+                            <li>Query objects by labels</li>
+                            <li>Equality-based: =, !=</li>
+                            <li>Set-based: in, notin, exists</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Annotations -->
+            <section>
+                <h2>Annotations</h2>
+                <div class="code-block smaller">
+metadata:
+  annotations:
+    kubernetes.io/change-cause: "Updated to version 1.2"
+    deployment.kubernetes.io/revision: "3"
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+                </div>
+                <ul>
+                    <li><strong>Purpose</strong>
+                        <ul class="smaller">
+                            <li>Non-identifying metadata</li>
+                            <li>Larger values than labels</li>
+                            <li>Tool and library information</li>
+                        </ul>
+                    </li>
+                    <li><strong>Common Uses</strong>
+                        <ul class="smaller">
+                            <li>Build/release information</li>
+                            <li>Monitoring configuration</li>
+                            <li>Ingress controller settings</li>
+                            <li>Change tracking</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Lab 2 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 2: Working with Pods and Basic Objects</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Create and manage pods in your namespace</li>
+                        <li>Explore pod lifecycle and states</li>
+                        <li>Execute commands inside containers</li>
+                        <li>Work with labels and annotations</li>
+                        <li>Understand multi-container pods</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Pod management, container interaction, resource limits</p>
+                </div>
+            </section>
+
+            <!-- Resource Management -->
+            <section>
+                <h2>Resource Management</h2>
+                <div class="code-block smaller">
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "250m"      # 0.25 CPU cores
+  limits:
+    memory: "128Mi"
+    cpu: "500m"      # 0.5 CPU cores
+                </div>
+                <ul>
+                    <li><strong>Requests</strong>
+                        <ul class="smaller">
+                            <li>Minimum resources guaranteed</li>
+                            <li>Used for scheduling decisions</li>
+                            <li>Container gets at least this amount</li>
+                        </ul>
+                    </li>
+                    <li><strong>Limits</strong>
+                        <ul class="smaller">
+                            <li>Maximum resources allowed</li>
+                            <li>Container cannot exceed this</li>
+                            <li>OOMKilled if memory limit exceeded</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Quality of Service -->
+            <section>
+                <h2>Quality of Service (QoS)</h2>
+                <ul>
+                    <li><strong>Guaranteed</strong>
+                        <ul class="smaller">
+                            <li>Requests = Limits for all containers</li>
+                            <li>Highest priority</li>
+                            <li>Never killed unless exceeding limits</li>
+                        </ul>
+                    </li>
+                    <li><strong>Burstable</strong>
+                        <ul class="smaller">
+                            <li>Has requests but requests ≠ limits</li>
+                            <li>Medium priority</li>
+                            <li>Killed if node runs out of resources</li>
+                        </ul>
+                    </li>
+                    <li><strong>BestEffort</strong>
+                        <ul class="smaller">
+                            <li>No requests or limits specified</li>
+                            <li>Lowest priority</li>
+                            <li>First to be killed</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Service Types Deep Dive -->
+            <section>
+                <h2>Service Types Deep Dive</h2>
+                <div class="code-block smaller">
+# ClusterIP Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: ClusterIP
+  selector:
+    app: my-app
+  ports:
+  - port: 80
+    targetPort: 8080
+                </div>
+                <div class="warning">
+                    <strong>Important:</strong> ClusterIP is only accessible from within the cluster
+                </div>
+            </section>
+
+            <!-- Load Balancer Services -->
+            <section>
+                <h2>LoadBalancer Services on EKS</h2>
+                <div class="code-block smaller">
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-loadbalancer
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+spec:
+  type: LoadBalancer
+  selector:
+    app: my-app
+  ports:
+  - port: 80
+    targetPort: 8080
+                </div>
+                <ul class="smaller">
+                    <li><strong>AWS Load Balancer Controller:</strong> Advanced load balancing</li>
+                    <li><strong>Network Load Balancer (NLB):</strong> Layer 4, high performance</li>
+                    <li><strong>Application Load Balancer (ALB):</strong> Layer 7, via Ingress</li>
+                </ul>
+            </section>
+
+            <!-- Lab 3 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 3: Services and Application Exposure</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Create ClusterIP, NodePort, and LoadBalancer services</li>
+                        <li>Test service connectivity between pods</li>
+                        <li>Understand DNS-based service discovery</li>
+                        <li>Practice service troubleshooting</li>
+                        <li>Work with multi-port services</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Service networking, load balancing, DNS resolution</p>
+                </div>
+            </section>
+
+            <!-- Deployment Configuration -->
+            <section>
+                <h2>Deployment Configuration</h2>
+                <div class="code-block smaller">
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+                </div>
+            </section>
+
+            <!-- Rolling Updates -->
+            <section>
+                <h2>Rolling Updates</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Step 1: [Old Pod] [Old Pod] [Old Pod]
+Step 2: [Old Pod] [Old Pod] [New Pod]
+Step 3: [Old Pod] [New Pod] [New Pod]
+Step 4: [New Pod] [New Pod] [New Pod]
+                    </div>
+                </div>
+                <ul>
+                    <li><strong>Controlled Rollout</strong>
+                        <ul class="smaller">
+                            <li>Gradual replacement of pods</li>
+                            <li>Health checks before proceeding</li>
+                            <li>Automatic rollback on failure</li>
+                        </ul>
+                    </li>
+                    <li><strong>Configuration Options</strong>
+                        <ul class="smaller">
+                            <li>maxSurge: Extra pods during update</li>
+                            <li>maxUnavailable: Pods that can be down</li>
+                            <li>progressDeadlineSeconds: Timeout</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Rollback Operations -->
+            <section>
+                <h2>Rollback Operations</h2>
+                <div class="code-block smaller">
+# View rollout history
+kubectl rollout history deployment/nginx-deployment
+
+# Rollback to previous version
+kubectl rollout undo deployment/nginx-deployment
+
+# Rollback to specific revision
+kubectl rollout undo deployment/nginx-deployment --to-revision=2
+
+# Monitor rollout status
+kubectl rollout status deployment/nginx-deployment
+                </div>
+                <div class="key-point">
+                    <strong>Best Practice:</strong> Always test deployments in staging before production
+                </div>
+            </section>
+
+            <!-- Lab 4 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 4: Deployments and ReplicaSets</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Create and manage deployments</li>
+                        <li>Scale applications up and down</li>
+                        <li>Perform rolling updates and rollbacks</li>
+                        <li>Understand deployment strategies</li>
+                        <li>Practice blue-green deployment patterns</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Deployment management, scaling, update strategies</p>
+                </div>
+            </section>
+
+            <!-- kubectl Commands -->
+            <section>
+                <h2>Essential kubectl Commands</h2>
+                <div class="code-block smaller">
+# Get resources
+kubectl get pods,svc,deployments
+
+# Describe resources
+kubectl describe pod my-pod
+
+# View logs
+kubectl logs my-pod -c container-name
+
+# Execute commands
+kubectl exec -it my-pod -- /bin/bash
+
+# Apply configurations
+kubectl apply -f my-config.yaml
+
+# Delete resources
+kubectl delete deployment my-deployment
+                </div>
+            </section>
+
+            <!-- YAML Best Practices -->
+            <section>
+                <h2>YAML Best Practices</h2>
+                <ul>
+                    <li><strong>Resource Limits</strong>
+                        <ul class="smaller">
+                            <li>Always specify requests and limits</li>
+                            <li>Use appropriate units (Mi, Gi for memory)</li>
+                            <li>Monitor actual usage patterns</li>
+                        </ul>
+                    </li>
+                    <li><strong>Labels and Selectors</strong>
+                        <ul class="smaller">
+                            <li>Use consistent labeling strategy</li>
+                            <li>Include app, version, component labels</li>
+                            <li>Avoid changing selector labels</li>
+                        </ul>
+                    </li>
+                    <li><strong>Health Checks</strong>
+                        <ul class="smaller">
+                            <li>Always include readiness probes</li>
+                            <li>Use liveness probes for long-running apps</li>
+                            <li>Set appropriate timeouts</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Security Considerations -->
+            <section>
+                <h2>Security Considerations</h2>
+                <ul>
+                    <li><strong>Resource Isolation</strong>
+                        <ul class="smaller">
+                            <li>Use namespaces for tenant isolation</li>
+                            <li>Implement resource quotas</li>
+                            <li>Network policies for traffic control</li>
+                        </ul>
+                    </li>
+                    <li><strong>Container Security</strong>
+                        <ul class="smaller">
+                            <li>Use non-root containers</li>
+                            <li>Read-only root filesystems</li>
+                            <li>Scan images for vulnerabilities</li>
+                        </ul>
+                    </li>
+                    <li><strong>Access Control</strong>
+                        <ul class="smaller">
+                            <li>RBAC for fine-grained permissions</li>
+                            <li>Service accounts for applications</li>
+                            <li>Pod security standards</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Day 1 Summary -->
+            <section>
+                <h2>Day 1 Summary</h2>
+                <div class="key-point">
+                    <h3>What We Covered</h3>
+                    <ul class="smaller">
+                        <li>✅ Kubernetes architecture and core concepts</li>
+                        <li>✅ Pod lifecycle and management</li>
+                        <li>✅ Service types and networking</li>
+                        <li>✅ Deployments and scaling</li>
+                        <li>✅ Basic kubectl operations</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <h3>Tomorrow's Preview</h3>
+                    <ul class="smaller">
+                        <li>🚀 Microservices deployment</li>
+                        <li>📦 Helm package management</li>
+                        <li>💊 Health checks and monitoring</li>
+                        <li>📈 Autoscaling strategies</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Q&A -->
+            <section class="center">
+                <h1>Questions & Discussion</h1>
+                <div class="key-point">
+                    <h3>Key Topics for Discussion</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Cluster architecture questions</li>
+                        <li>Pod and service networking</li>
+                        <li>Deployment strategies</li>
+                        <li>Lab exercise challenges</li>
+                        <li>Real-world scenarios</li>
+                    </ul>
+                </div>
+                <p><strong>Next:</strong> Lab work and hands-on practice</p>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: false,
+            transition: 'slide'
+        });
+    </script>
+</body>
+</html>

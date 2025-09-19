@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-readiness-demo
+  namespace: userX-namespace
+  labels:
+    app: readiness-demo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: readiness-demo
+  template:
+    metadata:
+      labels:
+        app: readiness-demo
+    spec:
+      containers:
+      - name: readiness-demo
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let isReady = false;
+          let isHealthy = true;
+          let startupTime = Date.now();
+
+          // Simulate startup process - becomes ready after 30 seconds
+          setTimeout(() => {
+            isReady = true;
+            console.log('Application is now ready to serve traffic');
+          }, 30000);
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/health') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                status: isHealthy ? 'healthy' : 'unhealthy',
+                uptime: process.uptime()
+              }));
+            } else if (req.url === '/ready') {
+              if (isReady) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'ready',
+                  uptime: process.uptime(),
+                  startupDuration: (Date.now() - startupTime) / 1000
+                }));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'not ready',
+                  message: 'Still starting up...'
+                }));
+              }
+            } else if (req.url === '/toggle-ready') {
+              isReady = !isReady;
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({message: 'Readiness toggled', ready: isReady}));
+            } else {
+              if (isReady) {
+                res.writeHead(200, {'Content-Type': 'text/html'});
+                res.end(`
+                  <h1>userX Readiness Probe Demo</h1>
+                  <p>Status: Ready and serving traffic</p>
+                  <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+                  <p>Pod: ${process.env.HOSTNAME}</p>
+                  <a href="/toggle-ready">Toggle Ready Status</a>
+                `);
+              } else {
+                res.writeHead(503, {'Content-Type': 'text/html'});
+                res.end('<h1>Service Unavailable</h1><p>Application is starting up...</p>');
+              }
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Server starting on port 3000, will be ready in 30 seconds...');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

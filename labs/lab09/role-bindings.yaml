@@ -1,0 +1,63 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: userX-read-pods
+  namespace: userX-namespace
+  labels:
+    app: rbac-demo
+subjects:
+- kind: ServiceAccount
+  name: userX-app-reader
+  namespace: userX-namespace
+roleRef:
+  kind: Role
+  name: userX-pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: userX-manage-pods
+  namespace: userX-namespace
+  labels:
+    app: rbac-demo
+subjects:
+- kind: ServiceAccount
+  name: userX-app-manager
+  namespace: userX-namespace
+roleRef:
+  kind: Role
+  name: userX-pod-manager
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: userX-admin-namespace
+  namespace: userX-namespace
+  labels:
+    app: rbac-demo
+subjects:
+- kind: ServiceAccount
+  name: userX-admin
+  namespace: userX-namespace
+roleRef:
+  kind: Role
+  name: userX-namespace-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: userX-minimal-configmap
+  namespace: userX-namespace
+  labels:
+    app: rbac-demo
+subjects:
+- kind: ServiceAccount
+  name: userX-minimal
+  namespace: userX-namespace
+roleRef:
+  kind: Role
+  name: userX-configmap-reader
+  apiGroup: rbac.authorization.k8s.io

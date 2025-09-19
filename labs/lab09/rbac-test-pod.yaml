@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-rbac-test
+  namespace: userX-namespace
+  labels:
+    app: rbac-test
+spec:
+  serviceAccountName: default
+  containers:
+  - name: rbac-test
+    image: alpine:3.18
+    command: ["sh", "-c"]
+    args:
+    - |
+      apk add --no-cache curl
+      echo "RBAC test pod with default service account (no permissions)"
+      echo "This pod should fail to access Kubernetes API"
+      sleep 3600
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+  restartPolicy: Never

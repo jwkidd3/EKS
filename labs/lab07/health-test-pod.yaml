@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-health-test
+  namespace: userX-namespace
+  labels:
+    app: health-test
+spec:
+  containers:
+  - name: test-tools
+    image: alpine:3.18
+    command: ["sh", "-c"]
+    args:
+    - |
+      apk add --no-cache curl wget
+      echo "Health test pod ready with curl and wget"
+      sleep 3600
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+  restartPolicy: Never

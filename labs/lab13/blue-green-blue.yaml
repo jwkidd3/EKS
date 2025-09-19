@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-blue-app
+  namespace: userX-namespace
+  labels:
+    app: blue-green
+    version: blue
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: blue-green
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: blue-green
+        version: blue
+    spec:
+      containers:
+      - name: app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const server = http.createServer((req, res) => {
+            if (req.url === '/version') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                version: 'blue',
+                app: 'userX-blue-green-demo',
+                pod: process.env.HOSTNAME,
+                timestamp: new Date().toISOString()
+              }));
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end('<h1 style="color: blue;">Blue Version - userX App</h1><p>Pod: ' + process.env.HOSTNAME + '</p>');
+            }
+          });
+          server.listen(3000, () => console.log('Blue version running'));
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

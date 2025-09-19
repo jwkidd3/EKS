@@ -1,0 +1,23 @@
+apiVersion: v2
+name: userX-microservices
+description: A Helm chart for userX microservices application
+type: application
+version: 0.1.0
+appVersion: "1.0"
+
+keywords:
+  - microservices
+  - nodejs
+  - crystal
+  - frontend
+  - redis
+
+maintainers:
+  - name: userX
+    email: userX@example.com
+
+sources:
+  - https://github.com/example/userX-microservices
+
+annotations:
+  category: Application

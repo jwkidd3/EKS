@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-blue-deployment
+  namespace: userX-namespace
+  labels:
+    app: blue-green-app
+    version: blue
+    owner: userX
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: blue-green-app
+      version: blue
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: blue-green-app
+        version: blue
+        owner: userX
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        env:
+        - name: VERSION
+          value: "blue"
+        - name: COLOR
+          value: "#0000FF"

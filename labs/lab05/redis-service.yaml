@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-redis-service
+  namespace: userX-namespace
+  labels:
+    app: redis-service
+    owner: userX
+spec:
+  type: ClusterIP
+  selector:
+    app: redis
+    owner: userX
+  ports:
+  - port: 6379
+    targetPort: 6379
+    protocol: TCP

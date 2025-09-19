@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-liveness-http
+  namespace: userX-namespace
+  labels:
+    app: liveness-http
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-http
+  template:
+    metadata:
+      labels:
+        app: liveness-http
+    spec:
+      containers:
+      - name: web-server
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let isHealthy = true;
+          let requestCount = 0;
+
+          const server = http.createServer((req, res) => {
+            requestCount++;
+
+            if (req.url === '/health') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                status: isHealthy ? 'healthy' : 'unhealthy',
+                uptime: process.uptime(),
+                requests: requestCount
+              }));
+            } else if (req.url === '/toggle') {
+              isHealthy = !isHealthy;
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({message: 'Health toggled', healthy: isHealthy}));
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX Liveness HTTP Probe Demo</h1>
+                <p>Status: ${isHealthy ? 'Healthy' : 'Unhealthy'}</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+                <p>Requests: ${requestCount}</p>
+                <a href="/toggle">Toggle Health Status</a>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Server running on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 2
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

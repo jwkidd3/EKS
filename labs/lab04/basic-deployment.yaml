@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-nginx-deployment
+  namespace: userX-namespace
+  labels:
+    app: nginx
+    owner: userX
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: nginx
+        owner: userX
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

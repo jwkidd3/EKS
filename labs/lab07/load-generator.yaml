@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-load-generator
+  namespace: userX-namespace
+  labels:
+    app: load-generator
+spec:
+  containers:
+  - name: load-generator
+    image: alpine:3.18
+    command: ["sh", "-c"]
+    args:
+    - |
+      apk add --no-cache curl
+      echo "Load generator ready"
+      sleep 3600
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+  restartPolicy: Never

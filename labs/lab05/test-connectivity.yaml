@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-connectivity-test
+  namespace: userX-namespace
+  labels:
+    app: connectivity-test
+    owner: userX
+spec:
+  containers:
+  - name: test-tools
+    image: alpine:3.18
+    command: ['sh', '-c', 'apk add --no-cache curl redis && while true; do sleep 30; done']
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"

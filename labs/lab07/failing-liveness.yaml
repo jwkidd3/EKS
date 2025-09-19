@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-failing-liveness
+  namespace: userX-namespace
+  labels:
+    app: failing-liveness
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: failing-liveness
+  template:
+    metadata:
+      labels:
+        app: failing-liveness
+    spec:
+      containers:
+      - name: failing-app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let healthy = true;
+
+          // Application becomes unhealthy after 1 minute
+          setTimeout(() => {
+            healthy = false;
+            console.log('Application is now unhealthy - liveness probe will fail');
+          }, 60000);
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/health') {
+              if (healthy) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'healthy', uptime: process.uptime()}));
+              } else {
+                // Return 500 error to fail liveness probe
+                res.writeHead(500, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'unhealthy', uptime: process.uptime()}));
+              }
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX Failing Liveness Demo</h1>
+                <p>Status: ${healthy ? 'Healthy' : 'Unhealthy'}</p>
+                <p>This app will become unhealthy after 1 minute</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Failing liveness app started on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 2
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

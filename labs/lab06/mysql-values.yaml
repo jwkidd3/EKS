@@ -1,0 +1,62 @@
+## MySQL Configuration Values for userX
+## Replace userX with your assigned user number
+
+# Database authentication
+auth:
+  rootPassword: "password123"
+  createDatabase: true
+  database: "userX_db"
+  username: "userX_user"
+  password: "userpassword"
+
+# Primary configuration
+primary:
+  persistence:
+    enabled: false  # Disable persistence for training
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# Service configuration
+service:
+  type: ClusterIP
+  ports:
+    mysql: 3306
+
+# Metrics and monitoring
+metrics:
+  enabled: false
+
+# Security context
+securityContext:
+  enabled: true
+  fsGroup: 1001
+  runAsUser: 1001
+
+# Pod security context
+podSecurityContext:
+  enabled: true
+  fsGroup: 1001
+
+# Container security context
+containerSecurityContext:
+  enabled: true
+  runAsUser: 1001
+  runAsNonRoot: true
+
+# Initialization scripts
+initdbScripts:
+  my_init_script.sql: |
+    CREATE TABLE IF NOT EXISTS users (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(100),
+      email VARCHAR(100),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO users (name, email) VALUES
+      ('userX Test User', 'userX@example.com'),
+      ('Sample User', 'sample@example.com');

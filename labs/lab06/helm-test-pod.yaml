@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-helm-test
+  namespace: userX-namespace
+  labels:
+    app: helm-test
+spec:
+  containers:
+  - name: test-tools
+    image: alpine:3.18
+    command: ["sh", "-c"]
+    args:
+    - |
+      apk add --no-cache curl redis mysql-client
+      echo "Test pod ready with curl, redis-cli, and mysql client"
+      sleep 3600
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+  restartPolicy: Never

@@ -1,0 +1,122 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-frontend
+  namespace: userX-namespace
+  labels:
+    app: frontend
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: frontend
+        owner: userX
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        env:
+        - name: NODEJS_BACKEND
+          value: "userX-nodejs-service"
+        - name: CRYSTAL_BACKEND
+          value: "userX-crystal-service"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/nginx/conf.d
+        - name: html-volume
+          mountPath: /usr/share/nginx/html
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > /usr/share/nginx/html/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>userX Microservices Demo</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; }
+                  .container { max-width: 800px; margin: 0 auto; }
+                  .service { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 5px; }
+                  button { background: #007cba; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+                  .result { background: #e7f3ff; padding: 10px; margin: 10px 0; border-radius: 3px; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>userX Microservices Demo</h1>
+
+                  <div class="service">
+                      <h2>NodeJS Backend</h2>
+                      <button onclick="testNodeJS()">Test NodeJS Service</button>
+                      <div id="nodejs-result" class="result"></div>
+                  </div>
+
+                  <div class="service">
+                      <h2>Crystal Backend</h2>
+                      <button onclick="testCrystal()">Test Crystal Service</button>
+                      <div id="crystal-result" class="result"></div>
+                  </div>
+              </div>
+
+              <script>
+                  function testNodeJS() {
+                      fetch('/api/nodejs/health')
+                          .then(response => response.json())
+                          .then(data => {
+                              document.getElementById('nodejs-result').innerHTML =
+                                  '<strong>NodeJS Response:</strong> ' + JSON.stringify(data, null, 2);
+                          })
+                          .catch(error => {
+                              document.getElementById('nodejs-result').innerHTML =
+                                  '<strong>Error:</strong> ' + error.message;
+                          });
+                  }
+
+                  function testCrystal() {
+                      fetch('/api/crystal/health')
+                          .then(response => response.json())
+                          .then(data => {
+                              document.getElementById('crystal-result').innerHTML =
+                                  '<strong>Crystal Response:</strong> ' + JSON.stringify(data, null, 2);
+                          })
+                          .catch(error => {
+                              document.getElementById('crystal-result').innerHTML =
+                                  '<strong>Error:</strong> ' + error.message;
+                          });
+                  }
+              </script>
+          </body>
+          </html>
+          EOF
+
+          nginx -g 'daemon off;'
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+      volumes:
+      - name: config-volume
+        configMap:
+          name: userX-frontend-config
+          items:
+          - key: nginx.conf
+            path: default.conf
+      - name: html-volume
+        emptyDir: {}

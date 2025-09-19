@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: userX-frontend-config
+  namespace: userX-namespace
+  labels:
+    app: frontend-config
+    owner: userX
+data:
+  app.config: |
+    {
+      "nodejs_backend_url": "http://userX-nodejs-service:3000",
+      "crystal_backend_url": "http://userX-crystal-service:3000",
+      "app_title": "userX Microservices Demo",
+      "version": "1.0.0"
+    }
+  nginx.conf: |
+    server {
+        listen 80;
+        server_name localhost;
+
+        location / {
+            root /usr/share/nginx/html;
+            index index.html;
+            try_files $uri $uri/ /index.html;
+        }
+
+        location /api/nodejs/ {
+            proxy_pass http://userX-nodejs-service:3000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /api/crystal/ {
+            proxy_pass http://userX-crystal-service:3000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }

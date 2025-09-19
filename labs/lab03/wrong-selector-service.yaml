@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-wrong-service
+  namespace: userX-namespace
+  labels:
+    app: wrong-service
+    owner: userX
+spec:
+  type: ClusterIP
+  selector:
+    app: wrong-app  # This selector won't match any pods
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP

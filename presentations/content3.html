@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.css">
+    <style>
+        .reveal { font-size: 28px; }
+        .reveal h1 { font-size: 2.2em; color: #2c3e50; }
+        .reveal h2 { font-size: 1.8em; color: #2c3e50; }
+        .reveal h3 { font-size: 1.4em; color: #2c3e50; }
+        .reveal .slides section { text-align: left; }
+        .reveal .slides section.center { text-align: center; }
+        .lab-callout { background: #3498db; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .code-block { background: #f8f9fa; padding: 10px; border-left: 4px solid #007cba; font-family: monospace; font-size: 0.65em; line-height: 1.2; }
+        .architecture-diagram { text-align: center; margin: 15px 0; }
+        .key-point { background: #e8f5e8; padding: 8px; border-left: 4px solid #27ae60; margin: 8px 0; }
+        .warning { background: #fdf2e9; padding: 8px; border-left: 4px solid #e67e22; margin: 8px 0; }
+        .security { background: #ffeaa7; padding: 8px; border-left: 4px solid #fdcb6e; margin: 8px 0; }
+        .small { font-size: 0.75em; }
+        .smaller { font-size: 0.65em; }
+        .reveal ul { margin: 0.5em 0; }
+        .reveal li { margin: 0.3em 0; }
+        .reveal p { margin: 0.5em 0; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title Slide -->
+            <section class="center">
+                <h1>Amazon EKS Training</h1>
+                <h2>Day 3: Security, Networking, and Advanced Operations</h2>
+                <p>Production-Ready Kubernetes Operations</p>
+                <div class="small">
+                    <p>RBAC • Network Policies • Node Management • Stateful Apps • Troubleshooting</p>
+                    <p>Duration: 8 hours (including labs)</p>
+                </div>
+            </section>
+
+            <!-- Course Journey Recap -->
+            <section>
+                <h2>Our Kubernetes Journey</h2>
+                <div class="key-point">
+                    <h3>Day 1: Foundations</h3>
+                    <ul class="smaller">
+                        <li>✅ Kubernetes architecture and EKS basics</li>
+                        <li>✅ Pods, Services, and Deployments</li>
+                        <li>✅ Basic cluster operations</li>
+                    </ul>
+                </div>
+                <div class="key-point">
+                    <h3>Day 2: Application Management</h3>
+                    <ul class="smaller">
+                        <li>✅ Microservices deployment patterns</li>
+                        <li>✅ Helm package management</li>
+                        <li>✅ Health checks and autoscaling</li>
+                    </ul>
+                </div>
+                <div class="security">
+                    <h3>Day 3: Production Readiness</h3>
+                    <p>Today we focus on security, networking, and operational excellence</p>
+                </div>
+            </section>
+
+            <!-- Day 3 Agenda -->
+            <section>
+                <h2>Day 3 Agenda</h2>
+                <ul>
+                    <li><strong>Module 3:</strong> Security and Access Control</li>
+                    <li><strong>Lab 9:</strong> Implementing RBAC</li>
+                    <li><strong>Lab 10:</strong> Network Security and Policies</li>
+                    <li><strong>Lab 11:</strong> Node Management and Workload Placement</li>
+                    <li><strong>Lab 12:</strong> Stateful Applications</li>
+                    <li><strong>Lab 13:</strong> Troubleshooting and Advanced Deployment Patterns</li>
+                </ul>
+                <div class="security">
+                    <strong>Focus:</strong> Production-ready security, networking, and operational patterns
+                </div>
+            </section>
+
+            <!-- Kubernetes Security Model -->
+            <section>
+                <h2>Kubernetes Security Model</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+    ┌─────────────────────────────────────────────────┐
+    │                 API Server                      │
+    │  ┌─────────────┐ ┌─────────────┐ ┌──────────┐   │
+    │  │Authentication│ │Authorization│ │Admission │   │
+    │  │   (AuthN)    │ │   (AuthZ)   │ │ Control  │   │
+    │  └─────────────┘ └─────────────┘ └──────────┘   │
+    └─────────────────────────────────────────────────┘
+              │                │               │
+              ▼                ▼               ▼
+         Who are you?    What can you do?  Is it allowed?
+         - Certificates   - RBAC           - Policies
+         - Tokens        - ABAC           - Quotas
+         - Identity      - Webhook        - Security
+                    </div>
+                </div>
+            </section>
+
+            <!-- Authentication in Kubernetes -->
+            <section>
+                <h2>Authentication in Kubernetes</h2>
+                <ul>
+                    <li><strong>X.509 Client Certificates</strong>
+                        <ul class="smaller">
+                            <li>Most common method</li>
+                            <li>Embedded in kubeconfig</li>
+                            <li>Subject becomes username</li>
+                        </ul>
+                    </li>
+                    <li><strong>Bearer Tokens</strong>
+                        <ul class="smaller">
+                            <li>Service Account tokens</li>
+                            <li>Static tokens (not recommended)</li>
+                            <li>Bootstrap tokens</li>
+                        </ul>
+                    </li>
+                    <li><strong>OpenID Connect (OIDC)</strong>
+                        <ul class="smaller">
+                            <li>Integration with identity providers</li>
+                            <li>Common in enterprise environments</li>
+                            <li>JWT tokens with claims</li>
+                        </ul>
+                    </li>
+                    <li><strong>Webhook Token Authentication</strong>
+                        <ul class="smaller">
+                            <li>External authentication service</li>
+                            <li>Custom authentication logic</li>
+                            <li>Flexible integration</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- RBAC Introduction -->
+            <section>
+                <h2>Role-Based Access Control (RBAC)</h2>
+                <ul>
+                    <li><strong>Core Concepts</strong>
+                        <ul class="smaller">
+                            <li><strong>Subjects:</strong> Users, Groups, Service Accounts</li>
+                            <li><strong>Roles:</strong> Set of permissions</li>
+                            <li><strong>Bindings:</strong> Link subjects to roles</li>
+                        </ul>
+                    </li>
+                    <li><strong>RBAC Objects</strong>
+                        <ul class="smaller">
+                            <li><strong>Role:</strong> Namespaced permissions</li>
+                            <li><strong>ClusterRole:</strong> Cluster-wide permissions</li>
+                            <li><strong>RoleBinding:</strong> Binds role to subjects in namespace</li>
+                            <li><strong>ClusterRoleBinding:</strong> Binds cluster role globally</li>
+                        </ul>
+                    </li>
+                    <li><strong>Benefits</strong>
+                        <ul class="smaller">
+                            <li>Principle of least privilege</li>
+                            <li>Fine-grained access control</li>
+                            <li>Audit and compliance</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- RBAC Architecture -->
+            <section>
+                <h2>RBAC Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+    │   Subject   │    │    Role     │    │  Resources  │
+    │             │    │             │    │             │
+    │ • User      │───▶│ • Verbs     │───▶│ • Pods      │
+    │ • Group     │    │ • Resources │    │ • Services  │
+    │ • ServiceAcc│    │ • Namespaces│    │ • Secrets   │
+    └─────────────┘    └─────────────┘    └─────────────┘
+           │                   ▲
+           │            ┌─────────────┐
+           └───────────▶│   Binding   │
+                        │             │
+                        │ Links       │
+                        │ Subject     │
+                        │ to Role     │
+                        └─────────────┘
+                    </div>
+                </div>
+            </section>
+
+            <!-- Role Definition -->
+            <section>
+                <h2>Role Definition</h2>
+                <div class="code-block smaller">
+# Namespace-scoped Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: development
+  name: pod-manager
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log"]
+  verbs: ["get", "list", "create", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "create", "update", "patch"]
+
+---
+# Cluster-scoped ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-reader
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list"]
+                </div>
+            </section>
+
+            <!-- RoleBinding Example -->
+            <section>
+                <h2>RoleBinding Example</h2>
+                <div class="code-block smaller">
+# RoleBinding (namespace-scoped)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pod-manager-binding
+  namespace: development
+subjects:
+- kind: User
+  name: jane
+  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: pod-manager-sa
+  namespace: development
+roleRef:
+  kind: Role
+  name: pod-manager
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ClusterRoleBinding (cluster-scoped)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-reader-binding
+subjects:
+- kind: User
+  name: monitoring-user
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: node-reader
+  apiGroup: rbac.authorization.k8s.io
+                </div>
+            </section>
+
+            <!-- Service Accounts -->
+            <section>
+                <h2>Service Accounts</h2>
+                <ul>
+                    <li><strong>Purpose</strong>
+                        <ul class="smaller">
+                            <li>Identity for pods and applications</li>
+                            <li>Automatic token mounting</li>
+                            <li>Namespace-scoped resources</li>
+                        </ul>
+                    </li>
+                    <li><strong>Default Behavior</strong>
+                        <ul class="smaller">
+                            <li>Every namespace has "default" service account</li>
+                            <li>Pods use default SA if not specified</li>
+                            <li>Token mounted at /var/run/secrets/kubernetes.io/serviceaccount/</li>
+                        </ul>
+                    </li>
+                    <li><strong>Best Practices</strong>
+                        <ul class="smaller">
+                            <li>Create dedicated SAs for applications</li>
+                            <li>Grant minimal required permissions</li>
+                            <li>Use token rotation</li>
+                            <li>Disable automounting when not needed</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- RBAC Verbs and Resources -->
+            <section>
+                <h2>RBAC Verbs and Resources</h2>
+                <div class="code-block smaller">
+# Common Verbs
+- get          # Retrieve individual resource
+- list         # List resources
+- create       # Create new resources
+- update       # Update existing resources
+- patch        # Partial updates
+- delete       # Delete resources
+- watch        # Watch for changes
+- "*"          # All verbs (use carefully)
+
+# Resource Examples
+- pods
+- services
+- deployments
+- secrets
+- configmaps
+- nodes
+- persistentvolumes
+- namespaces
+- "*/scale"    # Subresources
+- "*"          # All resources (dangerous)
+                </div>
+            </section>
+
+            <!-- Lab 9 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 9: Implementing RBAC</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Create service accounts for applications</li>
+                        <li>Define roles with specific permissions</li>
+                        <li>Create role bindings for users and service accounts</li>
+                        <li>Test access controls with different contexts</li>
+                        <li>Troubleshoot permission issues</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> RBAC configuration, security testing, access control</p>
+                </div>
+            </section>
+
+            <!-- Network Security Introduction -->
+            <section>
+                <h2>Kubernetes Network Security</h2>
+                <ul>
+                    <li><strong>Default Behavior</strong>
+                        <ul class="smaller">
+                            <li>All pods can communicate with all pods</li>
+                            <li>All namespaces can reach each other</li>
+                            <li>No traffic filtering by default</li>
+                        </ul>
+                    </li>
+                    <li><strong>Network Policies</strong>
+                        <ul class="smaller">
+                            <li>Kubernetes-native traffic filtering</li>
+                            <li>Pod-to-pod traffic control</li>
+                            <li>Ingress and egress rules</li>
+                        </ul>
+                    </li>
+                    <li><strong>CNI Requirements</strong>
+                        <ul class="smaller">
+                            <li>Requires network policy support</li>
+                            <li>Calico, Cilium, Weave Net</li>
+                            <li>AWS VPC CNI + Calico for EKS</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Network Policy Concepts -->
+            <section>
+                <h2>Network Policy Concepts</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+    ┌─────────────┐    Network     ┌─────────────┐
+    │  Frontend   │     Policy     │   Backend   │
+    │    Pods     │◀──────────────▶│    Pods     │
+    └─────────────┘      Rules     └─────────────┘
+           │                              │
+           ▼                              ▼
+    ┌─────────────┐                ┌─────────────┐
+    │   Ingress   │                │   Egress    │
+    │    Rules    │                │    Rules    │
+    │             │                │             │
+    │ • Allow HTTP│                │ • Allow DB  │
+    │ • Block SSH │                │ • Block Web │
+    └─────────────┘                └─────────────┘
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Ingress:</strong> Traffic coming into pods</li>
+                    <li><strong>Egress:</strong> Traffic leaving pods</li>
+                    <li><strong>Selectors:</strong> Choose which pods the policy applies to</li>
+                    <li><strong>Rules:</strong> Allow specific traffic patterns</li>
+                </ul>
+            </section>
+
+            <!-- Network Policy Example -->
+            <section>
+                <h2>Network Policy Example</h2>
+                <div class="code-block smaller">
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    - namespaceSelector:
+        matchLabels:
+          name: api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: database
+    ports:
+    - protocol: TCP
+      port: 5432
+                </div>
+            </section>
+
+            <!-- Default Deny Policies -->
+            <section>
+                <h2>Default Deny Policies</h2>
+                <div class="code-block smaller">
+# Deny all ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+
+---
+# Deny all egress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-egress
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+
+---
+# Deny all ingress and egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+                </div>
+            </section>
+
+            <!-- Lab 10 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 10: Network Security and Policies</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Explore existing Security Groups configuration</li>
+                        <li>Work with Calico Network Policies</li>
+                        <li>Create namespace-specific traffic policies</li>
+                        <li>Test inter-pod communication with policies</li>
+                        <li>Implement default deny and selective allow rules</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Network security, traffic filtering, policy testing</p>
+                </div>
+            </section>
+
+            <!-- Node Management Introduction -->
+            <section>
+                <h2>Node Management in Kubernetes</h2>
+                <ul>
+                    <li><strong>Node Lifecycle</strong>
+                        <ul class="smaller">
+                            <li>Node registration and health monitoring</li>
+                            <li>Cordoning and draining nodes</li>
+                            <li>Node replacement and maintenance</li>
+                        </ul>
+                    </li>
+                    <li><strong>Workload Placement</strong>
+                        <ul class="smaller">
+                            <li>NodeSelector for simple placement</li>
+                            <li>Node affinity for complex rules</li>
+                            <li>Taints and tolerations for isolation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Resource Management</strong>
+                        <ul class="smaller">
+                            <li>Node capacity and allocation</li>
+                            <li>Resource reservation</li>
+                            <li>Quality of Service classes</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- NodeSelector -->
+            <section>
+                <h2>NodeSelector</h2>
+                <div class="code-block smaller">
+# Label nodes
+kubectl label nodes worker-node-1 disktype=ssd
+kubectl label nodes worker-node-2 instancetype=memory-optimized
+
+# Use NodeSelector in Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  nodeSelector:
+    disktype: ssd
+  containers:
+  - name: nginx
+    image: nginx:1.21
+
+# Use in Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cache-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cache
+  template:
+    metadata:
+      labels:
+        app: cache
+    spec:
+      nodeSelector:
+        instancetype: memory-optimized
+      containers:
+      - name: redis
+        image: redis:7
+                </div>
+            </section>
+
+            <!-- Node Affinity -->
+            <section>
+                <h2>Node Affinity</h2>
+                <div class="code-block smaller">
+apiVersion: v1
+kind: Pod
+metadata:
+  name: with-node-affinity
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: disktype
+            operator: In
+            values:
+            - ssd
+            - nvme
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: zone
+            operator: In
+            values:
+            - us-east-1a
+  containers:
+  - name: nginx
+    image: nginx:1.21
+                </div>
+                <ul class="smaller">
+                    <li><strong>Required:</strong> Must be satisfied for scheduling</li>
+                    <li><strong>Preferred:</strong> Soft preference with weight</li>
+                </ul>
+            </section>
+
+            <!-- Pod Affinity and Anti-Affinity -->
+            <section>
+                <h2>Pod Affinity and Anti-Affinity</h2>
+                <div class="code-block smaller">
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-server
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-server
+  template:
+    metadata:
+      labels:
+        app: web-server
+    spec:
+      affinity:
+        # Run near cache pods
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - cache
+              topologyKey: kubernetes.io/hostname
+        # Spread across zones
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: web-server
+            topologyKey: failure-domain.beta.kubernetes.io/zone
+                </div>
+            </section>
+
+            <!-- Taints and Tolerations -->
+            <section>
+                <h2>Taints and Tolerations</h2>
+                <div class="code-block smaller">
+# Add taint to node
+kubectl taint nodes node1 key=value:NoSchedule
+kubectl taint nodes node2 dedicated=gpu:NoExecute
+
+# Toleration in Pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  tolerations:
+  - key: "key"
+    operator: "Equal"
+    value: "value"
+    effect: "NoSchedule"
+  - key: "dedicated"
+    operator: "Equal"
+    value: "gpu"
+    effect: "NoExecute"
+    tolerationSeconds: 3600
+  containers:
+  - name: nginx
+    image: nginx:1.21
+
+# Remove taint
+kubectl taint nodes node1 key:NoSchedule-
+                </div>
+                <ul class="smaller">
+                    <li><strong>NoSchedule:</strong> Don't schedule new pods</li>
+                    <li><strong>PreferNoSchedule:</strong> Try not to schedule</li>
+                    <li><strong>NoExecute:</strong> Evict existing pods</li>
+                </ul>
+            </section>
+
+            <!-- Lab 11 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 11: Node Management and Workload Placement</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Use NodeSelector to assign pods to specific nodes</li>
+                        <li>Configure node affinity rules for placement</li>
+                        <li>Implement anti-affinity to spread pods</li>
+                        <li>Test workload placement with different configurations</li>
+                        <li>Use taints and tolerations for specialized workloads</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Workload placement, node management, scheduling</p>
+                </div>
+            </section>
+
+            <!-- Stateful Applications -->
+            <section>
+                <h2>Stateful Applications in Kubernetes</h2>
+                <ul>
+                    <li><strong>Challenges</strong>
+                        <ul class="smaller">
+                            <li>Persistent identity requirements</li>
+                            <li>Ordered deployment and scaling</li>
+                            <li>Stable network identities</li>
+                            <li>Persistent storage management</li>
+                        </ul>
+                    </li>
+                    <li><strong>StatefulSets</strong>
+                        <ul class="smaller">
+                            <li>Ordered pod creation and deletion</li>
+                            <li>Stable network identities</li>
+                            <li>Persistent volume claims per pod</li>
+                            <li>Ordered rolling updates</li>
+                        </ul>
+                    </li>
+                    <li><strong>Use Cases</strong>
+                        <ul class="smaller">
+                            <li>Databases (MySQL, PostgreSQL, MongoDB)</li>
+                            <li>Message queues (Kafka, RabbitMQ)</li>
+                            <li>Distributed storage systems</li>
+                            <li>Applications requiring stable identity</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- StatefulSet vs Deployment -->
+            <section>
+                <h2>StatefulSet vs Deployment</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Deployment:
+web-app-abc123   web-app-def456   web-app-ghi789
+     │                │                │
+     ▼                ▼                ▼
+   Any PV           Any PV           Any PV
+
+StatefulSet:
+  db-0              db-1              db-2
+     │                │                │
+     ▼                ▼                ▼
+ db-0-pvc         db-1-pvc         db-2-pvc
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Deployment:</strong> Random names, any storage</li>
+                    <li><strong>StatefulSet:</strong> Ordered names, dedicated storage</li>
+                </ul>
+            </section>
+
+            <!-- Persistent Volumes in EKS -->
+            <section>
+                <h2>Persistent Volumes in EKS</h2>
+                <ul>
+                    <li><strong>EBS CSI Driver</strong>
+                        <ul class="smaller">
+                            <li>Block storage for single-zone access</li>
+                            <li>High performance, various volume types</li>
+                            <li>Automatic provisioning and attachment</li>
+                        </ul>
+                    </li>
+                    <li><strong>EFS CSI Driver</strong>
+                        <ul class="smaller">
+                            <li>Network file system, multi-zone access</li>
+                            <li>Shared storage for multiple pods</li>
+                            <li>Elastic scaling and performance</li>
+                        </ul>
+                    </li>
+                    <li><strong>FSx CSI Driver</strong>
+                        <ul class="smaller">
+                            <li>High-performance file systems</li>
+                            <li>Lustre for HPC workloads</li>
+                            <li>Windows File Server support</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Storage Classes -->
+            <section>
+                <h2>Storage Classes</h2>
+                <div class="code-block smaller">
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: shared-storage
+provisioner: efs.csi.aws.com
+parameters:
+  provisioningMode: efs-ap
+  fileSystemId: fs-12345678
+  directoryPerms: "0755"
+volumeBindingMode: Immediate
+reclaimPolicy: Retain
+                </div>
+            </section>
+
+            <!-- StatefulSet Example -->
+            <section>
+                <h2>StatefulSet Example</h2>
+                <div class="code-block smaller">
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 3
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:13
+        env:
+        - name: POSTGRES_DB
+          value: mydb
+        - name: POSTGRES_USER
+          value: user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: password
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        ports:
+        - containerPort: 5432
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: fast-ssd
+      resources:
+        requests:
+          storage: 10Gi
+                </div>
+            </section>
+
+            <!-- Lab 12 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 12: Stateful Applications</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Deploy StatefulSets for persistent identity</li>
+                        <li>Use pre-configured EBS CSI driver for volumes</li>
+                        <li>Practice scaling stateful applications</li>
+                        <li>Implement backup and restore procedures</li>
+                        <li>Understand stateful application patterns</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> StatefulSets, persistent storage, data management</p>
+                </div>
+            </section>
+
+            <!-- Troubleshooting Introduction -->
+            <section>
+                <h2>Kubernetes Troubleshooting</h2>
+                <ul>
+                    <li><strong>Systematic Approach</strong>
+                        <ul class="smaller">
+                            <li>Identify the problem scope</li>
+                            <li>Gather relevant information</li>
+                            <li>Form and test hypotheses</li>
+                            <li>Implement and verify solutions</li>
+                        </ul>
+                    </li>
+                    <li><strong>Common Problem Areas</strong>
+                        <ul class="smaller">
+                            <li>Pod scheduling and startup issues</li>
+                            <li>Service networking problems</li>
+                            <li>Resource constraints and limits</li>
+                            <li>Configuration and secrets</li>
+                        </ul>
+                    </li>
+                    <li><strong>Essential Tools</strong>
+                        <ul class="smaller">
+                            <li>kubectl commands for diagnosis</li>
+                            <li>Logging and monitoring systems</li>
+                            <li>Network debugging tools</li>
+                            <li>Performance monitoring</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Troubleshooting Commands -->
+            <section>
+                <h2>Essential Troubleshooting Commands</h2>
+                <div class="code-block smaller">
+# Pod troubleshooting
+kubectl describe pod <pod-name>
+kubectl logs <pod-name> -c <container-name>
+kubectl logs <pod-name> --previous
+kubectl exec -it <pod-name> -- /bin/bash
+
+# Service troubleshooting
+kubectl describe service <service-name>
+kubectl get endpoints <service-name>
+kubectl port-forward pod/<pod-name> 8080:80
+
+# Events and debugging
+kubectl get events --sort-by=.metadata.creationTimestamp
+kubectl get events --field-selector reason=Failed
+kubectl top pods
+kubectl top nodes
+
+# Network debugging
+kubectl exec <pod-name> -- nslookup <service-name>
+kubectl exec <pod-name> -- curl -v http://<service-name>
+kubectl exec <pod-name> -- netstat -tulpn
+                </div>
+            </section>
+
+            <!-- Advanced Deployment Patterns -->
+            <section>
+                <h2>Advanced Deployment Patterns</h2>
+                <ul>
+                    <li><strong>Blue-Green Deployment</strong>
+                        <ul class="smaller">
+                            <li>Two identical production environments</li>
+                            <li>Instant traffic switching</li>
+                            <li>Quick rollback capability</li>
+                        </ul>
+                    </li>
+                    <li><strong>Canary Deployment</strong>
+                        <ul class="smaller">
+                            <li>Gradual traffic shifting</li>
+                            <li>Risk mitigation through testing</li>
+                            <li>Real user feedback</li>
+                        </ul>
+                    </li>
+                    <li><strong>A/B Testing</strong>
+                        <ul class="smaller">
+                            <li>Feature flag driven deployments</li>
+                            <li>User segment targeting</li>
+                            <li>Performance comparison</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Blue-Green Deployment -->
+            <section>
+                <h2>Blue-Green Deployment Pattern</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Phase 1: Blue is live
+Load Balancer ────► Blue Environment (v1.0)
+                    Green Environment (v2.0) [Idle]
+
+Phase 2: Switch to Green
+Load Balancer ────► Green Environment (v2.0)
+                    Blue Environment (v1.0) [Standby]
+
+Phase 3: Cleanup or Rollback Ready
+Load Balancer ────► Green Environment (v2.0)
+                    Blue Environment [Ready for next deployment]
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Pros:</strong> Instant switching, easy rollback, zero downtime</li>
+                    <li><strong>Cons:</strong> Resource intensive, requires identical environments</li>
+                </ul>
+            </section>
+
+            <!-- Canary Deployment -->
+            <section>
+                <h2>Canary Deployment Pattern</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Phase 1: 95% v1.0, 5% v2.0
+Load Balancer ┬─ 95% ──► v1.0 (19 pods)
+              └─  5% ──► v2.0 (1 pod)
+
+Phase 2: 80% v1.0, 20% v2.0
+Load Balancer ┬─ 80% ──► v1.0 (16 pods)
+              └─ 20% ──► v2.0 (4 pods)
+
+Phase 3: 100% v2.0
+Load Balancer ────► v2.0 (20 pods)
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Pros:</strong> Risk mitigation, real user testing, gradual rollout</li>
+                    <li><strong>Cons:</strong> Complex routing, monitoring requirements</li>
+                </ul>
+            </section>
+
+            <!-- Lab 13 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 13: Troubleshooting and Advanced Deployment Patterns</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Use kubectl for advanced debugging techniques</li>
+                        <li>Analyze pod, service, and ingress logs</li>
+                        <li>Monitor resource usage and performance</li>
+                        <li>Implement blue-green deployments</li>
+                        <li>Practice canary deployment patterns</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Debugging, deployment strategies, operations</p>
+                </div>
+            </section>
+
+            <!-- Production Readiness Checklist -->
+            <section>
+                <h2>Production Readiness Checklist</h2>
+                <div class="key-point">
+                    <h3>Security</h3>
+                    <ul class="smaller">
+                        <li>✅ RBAC configured with least privilege</li>
+                        <li>✅ Network policies for traffic isolation</li>
+                        <li>✅ Pod security standards enforced</li>
+                        <li>✅ Secrets management properly configured</li>
+                    </ul>
+                </div>
+                <div class="key-point">
+                    <h3>Reliability</h3>
+                    <ul class="smaller">
+                        <li>✅ Health checks (liveness, readiness, startup)</li>
+                        <li>✅ Resource limits and requests defined</li>
+                        <li>✅ Horizontal pod autoscaling configured</li>
+                        <li>✅ Pod disruption budgets in place</li>
+                    </ul>
+                </div>
+                <div class="key-point">
+                    <h3>Observability</h3>
+                    <ul class="smaller">
+                        <li>✅ Comprehensive logging strategy</li>
+                        <li>✅ Monitoring and alerting configured</li>
+                        <li>✅ Distributed tracing for microservices</li>
+                        <li>✅ Performance metrics collection</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Next Steps and Advanced Topics -->
+            <section>
+                <h2>Next Steps and Advanced Topics</h2>
+                <div class="warning">
+                    <h3>Advanced Topics for Continued Learning</h3>
+                    <ul class="smaller">
+                        <li><strong>Service Mesh:</strong> Istio, Linkerd for advanced networking</li>
+                        <li><strong>GitOps:</strong> ArgoCD, Flux for automated deployments</li>
+                        <li><strong>Observability:</strong> Prometheus, Grafana, Jaeger</li>
+                        <li><strong>Security:</strong> OPA, Falco, Pod Security Standards</li>
+                        <li><strong>Cost Optimization:</strong> Spot instances, right-sizing</li>
+                        <li><strong>Multi-cluster:</strong> Federation, cross-cluster networking</li>
+                    </ul>
+                </div>
+                <div class="security">
+                    <h3>Certification Paths</h3>
+                    <ul class="smaller">
+                        <li><strong>CKA:</strong> Certified Kubernetes Administrator</li>
+                        <li><strong>CKAD:</strong> Certified Kubernetes Application Developer</li>
+                        <li><strong>CKS:</strong> Certified Kubernetes Security Specialist</li>
+                        <li><strong>AWS:</strong> AWS Certified Solutions Architect</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Course Summary -->
+            <section>
+                <h2>Course Summary</h2>
+                <div class="key-point">
+                    <h3>What We've Accomplished</h3>
+                    <ul class="smaller">
+                        <li>🏗️ <strong>Day 1:</strong> Mastered Kubernetes fundamentals and EKS basics</li>
+                        <li>🚀 <strong>Day 2:</strong> Deployed production-ready applications with Helm and autoscaling</li>
+                        <li>🔒 <strong>Day 3:</strong> Implemented security, networking, and operational best practices</li>
+                    </ul>
+                </div>
+                <div class="security">
+                    <h3>Key Skills Developed</h3>
+                    <ul class="smaller">
+                        <li>✅ Container orchestration with Kubernetes</li>
+                        <li>✅ Microservices deployment and management</li>
+                        <li>✅ Security implementation with RBAC and network policies</li>
+                        <li>✅ Operational excellence with monitoring and troubleshooting</li>
+                        <li>✅ Advanced deployment patterns and strategies</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Resources for Continued Learning -->
+            <section>
+                <h2>Resources for Continued Learning</h2>
+                <ul>
+                    <li><strong>Official Documentation</strong>
+                        <ul class="smaller">
+                            <li>Kubernetes Documentation: kubernetes.io/docs</li>
+                            <li>Amazon EKS User Guide</li>
+                            <li>AWS Container Services Documentation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Community Resources</strong>
+                        <ul class="smaller">
+                            <li>CNCF (Cloud Native Computing Foundation)</li>
+                            <li>Kubernetes Slack and Community Forums</li>
+                            <li>AWS Container Day events</li>
+                        </ul>
+                    </li>
+                    <li><strong>Hands-on Practice</strong>
+                        <ul class="smaller">
+                            <li>Katacoda and Play with Kubernetes</li>
+                            <li>AWS Free Tier for EKS experimentation</li>
+                            <li>Open source projects contribution</li>
+                        </ul>
+                    </li>
+                    <li><strong>Books and Courses</strong>
+                        <ul class="smaller">
+                            <li>"Kubernetes in Action" by Marko Lukša</li>
+                            <li>"Kubernetes Up & Running" by Kelsey Hightower</li>
+                            <li>Linux Foundation Kubernetes courses</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Final Q&A -->
+            <section class="center">
+                <h1>Final Questions & Discussion</h1>
+                <div class="key-point">
+                    <h3>Topics for Discussion</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Production deployment experiences</li>
+                        <li>Security implementation strategies</li>
+                        <li>Troubleshooting challenges and solutions</li>
+                        <li>Next steps for your Kubernetes journey</li>
+                        <li>Real-world application scenarios</li>
+                    </ul>
+                </div>
+                <div class="security">
+                    <h2>Thank You!</h2>
+                    <p>You're now equipped with production-ready Kubernetes and EKS skills</p>
+                </div>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: false,
+            transition: 'slide'
+        });
+    </script>
+</body>
+</html>

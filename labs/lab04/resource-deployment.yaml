@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-resource-nginx
+  namespace: userX-namespace
+  labels:
+    app: resource-nginx
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: resource-nginx
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: resource-nginx
+        owner: userX
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: NGINX_CPU_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: nginx
+              resource: limits.cpu
+        - name: NGINX_MEMORY_LIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: nginx
+              resource: limits.memory

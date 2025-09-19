@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-liveness-tcp
+  namespace: userX-namespace
+  labels:
+    app: liveness-tcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-tcp
+  template:
+    metadata:
+      labels:
+        app: liveness-tcp
+    spec:
+      containers:
+      - name: tcp-server
+        image: alpine:3.18
+        command: ["sh", "-c"]
+        args:
+        - |
+          # Install netcat
+          apk add --no-cache netcat-openbsd
+
+          # Start a simple TCP server that stops responding after 3 minutes
+          echo "Starting TCP server on port 8080..."
+
+          # Background process to kill the server after 3 minutes
+          (sleep 180 && pkill nc && echo "TCP server killed - will fail liveness check") &
+
+          # Start TCP server
+          while true; do
+            echo "TCP server listening..." | nc -l -p 8080 -q 1
+            sleep 1
+          done
+        ports:
+        - containerPort: 8080
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"

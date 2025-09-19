@@ -1,0 +1,90 @@
+{{- if .Values.frontend.configMap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.global.userPrefix }}-frontend-config
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+data:
+  default.conf: |
+    server {
+        listen       80;
+        server_name  localhost;
+
+        location / {
+            root   /usr/share/nginx/html;
+            index  index.html index.htm;
+        }
+
+        location /api/nodejs/ {
+            proxy_pass {{ .Values.frontend.configMap.data.backend_nodejs_url }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /api/crystal/ {
+            proxy_pass {{ .Values.frontend.configMap.data.backend_crystal_url }}/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+    }
+
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{{ .Values.global.userPrefix }} Microservices Frontend</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .service { background: #f5f5f5; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+            button:hover { background: #005a87; }
+            .response { background: #e8f5e8; padding: 10px; margin: 10px 0; border-radius: 4px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>{{ .Values.global.userPrefix }} Microservices Application</h1>
+            <p>This frontend is deployed using Helm and connects to backend services.</p>
+
+            <div class="service">
+                <h3>NodeJS Backend Service</h3>
+                <button onclick="testNodejs()">Test NodeJS Health</button>
+                <div id="nodejs-response" class="response"></div>
+            </div>
+
+            <div class="service">
+                <h3>Application Info</h3>
+                <p>Helm Release: {{ .Release.Name }}</p>
+                <p>Chart Version: {{ .Chart.Version }}</p>
+                <p>Namespace: {{ .Values.global.namespace }}</p>
+            </div>
+        </div>
+
+        <script>
+            function testNodejs() {
+                fetch('/api/nodejs/health')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('nodejs-response').innerHTML =
+                            '<strong>NodeJS Response:</strong> ' + JSON.stringify(data, null, 2);
+                    })
+                    .catch(error => {
+                        document.getElementById('nodejs-response').innerHTML =
+                            '<strong>Error:</strong> ' + error.message;
+                    });
+            }
+        </script>
+    </body>
+    </html>
+{{- end }}

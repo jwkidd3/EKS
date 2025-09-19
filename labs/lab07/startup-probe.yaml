@@ -1,0 +1,116 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-slow-start
+  namespace: userX-namespace
+  labels:
+    app: slow-start
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: slow-start
+  template:
+    metadata:
+      labels:
+        app: slow-start
+    spec:
+      containers:
+      - name: slow-starting-app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let startupComplete = false;
+          let healthy = true;
+
+          console.log('Starting slow application initialization...');
+
+          // Simulate slow startup process (2 minutes)
+          setTimeout(() => {
+            startupComplete = true;
+            console.log('Application startup completed!');
+          }, 120000);
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/startup') {
+              if (startupComplete) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'startup complete',
+                  uptime: process.uptime()
+                }));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'still starting',
+                  uptime: process.uptime(),
+                  message: 'Startup in progress...'
+                }));
+              }
+            } else if (req.url === '/health') {
+              if (startupComplete && healthy) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'healthy', uptime: process.uptime()}));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'not ready', uptime: process.uptime()}));
+              }
+            } else if (req.url === '/ready') {
+              if (startupComplete) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'ready', uptime: process.uptime()}));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({status: 'not ready', uptime: process.uptime()}));
+              }
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX Slow Starting Application</h1>
+                <p>Startup Status: ${startupComplete ? 'Complete' : 'In Progress'}</p>
+                <p>This app takes 2 minutes to start up completely</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Slow-starting app server listening on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 20  # Allow up to 200 seconds for startup
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

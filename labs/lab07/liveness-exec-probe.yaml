@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-liveness-exec
+  namespace: userX-namespace
+  labels:
+    app: liveness-exec
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-exec
+  template:
+    metadata:
+      labels:
+        app: liveness-exec
+    spec:
+      containers:
+      - name: app-with-file-check
+        image: alpine:3.18
+        command: ["sh", "-c"]
+        args:
+        - |
+          # Create a health file that gets removed after 2 minutes (simulating failure)
+          touch /tmp/healthy
+          echo "Application starting..."
+
+          # Background process to remove health file after 2 minutes
+          (sleep 120 && rm -f /tmp/healthy && echo "Health file removed - app will fail liveness check") &
+
+          # Main application loop
+          while true; do
+            echo "$(date): Application running..."
+            sleep 30
+          done
+        livenessProbe:
+          exec:
+            command:
+            - test
+            - -f
+            - /tmp/healthy
+          initialDelaySeconds: 10
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 2
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"

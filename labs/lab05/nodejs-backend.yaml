@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-nodejs-backend
+  namespace: userX-namespace
+  labels:
+    app: nodejs-backend
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nodejs-backend
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: nodejs-backend
+        owner: userX
+    spec:
+      containers:
+      - name: nodejs-backend
+        image: node:18-alpine
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: REDIS_HOST
+          value: "userX-redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > app.js << 'EOF'
+          const express = require('express');
+          const redis = require('redis');
+          const app = express();
+          const port = process.env.PORT || 3000;
+
+          const client = redis.createClient({
+            host: process.env.REDIS_HOST,
+            port: process.env.REDIS_PORT
+          });
+
+          app.use(express.json());
+
+          app.get('/health', (req, res) => {
+            res.json({ status: 'healthy', service: 'nodejs-backend' });
+          });
+
+          app.post('/data', async (req, res) => {
+            const { key, value } = req.body;
+            try {
+              await client.set(key, value);
+              res.json({ success: true, key, value });
+            } catch (error) {
+              res.status(500).json({ error: error.message });
+            }
+          });
+
+          app.get('/data/:key', async (req, res) => {
+            try {
+              const value = await client.get(req.params.key);
+              res.json({ key: req.params.key, value });
+            } catch (error) {
+              res.status(500).json({ error: error.message });
+            }
+          });
+
+          app.listen(port, () => {
+            console.log(`NodeJS Backend running on port ${port}`);
+          });
+          EOF
+
+          npm init -y
+          npm install express redis
+          node app.js
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5

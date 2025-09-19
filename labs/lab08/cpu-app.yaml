@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-cpu-app
+  namespace: userX-namespace
+  labels:
+    app: cpu-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cpu-app
+  template:
+    metadata:
+      labels:
+        app: cpu-app
+    spec:
+      containers:
+      - name: cpu-stress-app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          const crypto = require('crypto');
+
+          function cpuIntensiveTask(duration = 1000) {
+            const start = Date.now();
+            while (Date.now() - start < duration) {
+              // CPU-intensive operations
+              crypto.createHash('sha256').update(Math.random().toString()).digest('hex');
+            }
+          }
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/cpu-load') {
+              console.log('CPU load request received');
+              // Perform CPU-intensive task for 2 seconds
+              cpuIntensiveTask(2000);
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                message: 'CPU load generated',
+                pod: process.env.HOSTNAME,
+                timestamp: new Date().toISOString()
+              }));
+            } else if (req.url === '/health') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                status: 'healthy',
+                uptime: process.uptime(),
+                memory: process.memoryUsage()
+              }));
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX CPU Stress Application</h1>
+                <p>Pod: ${process.env.HOSTNAME}</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+                <p>Memory Usage: ${JSON.stringify(process.memoryUsage(), null, 2)}</p>
+                <hr>
+                <h3>Endpoints:</h3>
+                <ul>
+                  <li><a href="/cpu-load">Generate CPU Load</a></li>
+                  <li><a href="/health">Health Check</a></li>
+                </ul>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('CPU stress app running on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10

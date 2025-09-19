@@ -1,0 +1,62 @@
+{{- if .Values.redis.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.userPrefix }}-redis-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: redis
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.redis.service.type }}
+  ports:
+  - port: {{ .Values.redis.service.port }}
+    targetPort: {{ .Values.redis.service.port }}
+    protocol: TCP
+  selector:
+    app: redis
+    release: {{ .Release.Name }}
+{{- end }}
+---
+{{- if .Values.nodejs.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.userPrefix }}-nodejs-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: nodejs-backend
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.nodejs.service.type }}
+  ports:
+  - port: {{ .Values.nodejs.service.port }}
+    targetPort: {{ .Values.nodejs.service.port }}
+    protocol: TCP
+  selector:
+    app: nodejs-backend
+    release: {{ .Release.Name }}
+{{- end }}
+---
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.global.userPrefix }}-frontend-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+  - port: {{ .Values.frontend.service.port }}
+    targetPort: {{ .Values.frontend.service.port }}
+    protocol: TCP
+  selector:
+    app: frontend
+    release: {{ .Release.Name }}
+{{- end }}

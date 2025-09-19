@@ -1,0 +1,161 @@
+{{- if .Values.redis.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.userPrefix }}-redis
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: redis
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: redis
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: redis
+        image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.redis.service.port }}
+        resources:
+          {{- toYaml .Values.redis.resources | nindent 10 }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+{{- end }}
+---
+{{- if .Values.nodejs.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.userPrefix }}-nodejs-backend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: nodejs-backend
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.nodejs.replicaCount }}
+  selector:
+    matchLabels:
+      app: nodejs-backend
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: nodejs-backend
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: nodejs-backend
+        image: "{{ .Values.nodejs.image.repository }}:{{ .Values.nodejs.image.tag }}"
+        command: ["sh", "-c"]
+        args:
+        - |
+          npm init -y
+          npm install express redis
+          cat > app.js << 'EOF'
+          const express = require('express');
+          const redis = require('redis');
+          const app = express();
+
+          const client = redis.createClient({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: process.env.REDIS_PORT || 6379
+          });
+
+          app.use(express.json());
+
+          app.get('/health', (req, res) => {
+            res.json({ status: 'healthy', service: 'nodejs-backend' });
+          });
+
+          app.post('/data', async (req, res) => {
+            try {
+              await client.set(req.body.key, JSON.stringify(req.body.value));
+              res.json({ success: true });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          app.get('/data/:key', async (req, res) => {
+            try {
+              const value = await client.get(req.params.key);
+              res.json({ key: req.params.key, value: JSON.parse(value) });
+            } catch (err) {
+              res.status(500).json({ error: err.message });
+            }
+          });
+
+          const port = process.env.PORT || 3000;
+          app.listen(port, () => {
+            console.log(`NodeJS backend listening on port ${port}`);
+          });
+          EOF
+          node app.js
+        ports:
+        - containerPort: {{ .Values.nodejs.service.port }}
+        env:
+        {{- range $key, $value := .Values.nodejs.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.nodejs.resources | nindent 10 }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+{{- end }}
+---
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.global.userPrefix }}-frontend
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: frontend
+    chart: {{ include "userX-microservices.chart" . }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      app: frontend
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app: frontend
+        release: {{ .Release.Name }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: frontend
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.frontend.service.port }}
+        volumeMounts:
+        - name: frontend-config
+          mountPath: /etc/nginx/conf.d
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+      volumes:
+      - name: frontend-config
+        configMap:
+          name: {{ .Values.global.userPrefix }}-frontend-config
+{{- end }}

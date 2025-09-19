@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-crystal-backend
+  namespace: userX-namespace
+  labels:
+    app: crystal-backend
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crystal-backend
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: crystal-backend
+        owner: userX
+    spec:
+      containers:
+      - name: crystal-backend
+        image: crystallang/crystal:1.9.2-alpine
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: REDIS_HOST
+          value: "userX-redis-service"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: PORT
+          value: "3000"
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > app.cr << 'EOF'
+          require "http/server"
+          require "json"
+
+          server = HTTP::Server.new do |context|
+            if context.request.method == "GET" && context.request.path == "/health"
+              context.response.content_type = "application/json"
+              context.response.print({status: "healthy", service: "crystal-backend"}.to_json)
+            elsif context.request.method == "POST" && context.request.path == "/process"
+              body = context.request.body.try &.gets_to_end
+              if body
+                data = JSON.parse(body)
+                processed = {
+                  original: data,
+                  processed: true,
+                  timestamp: Time.utc.to_unix,
+                  processed_by: "crystal-backend"
+                }
+                context.response.content_type = "application/json"
+                context.response.print(processed.to_json)
+              else
+                context.response.status_code = 400
+                context.response.print("Bad Request")
+              end
+            else
+              context.response.status_code = 404
+              context.response.print("Not Found")
+            end
+          end
+
+          address = server.bind_tcp("0.0.0.0", 3000)
+          puts "Crystal Backend listening on http://#{address}"
+          server.listen
+          EOF
+
+          crystal app.cr
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 10

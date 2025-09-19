@@ -1,0 +1,188 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-best-practices
+  namespace: userX-namespace
+  labels:
+    app: best-practices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: best-practices
+  template:
+    metadata:
+      labels:
+        app: best-practices
+    spec:
+      containers:
+      - name: best-practices-app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let isHealthy = true;
+          let isReady = false;
+          let startupComplete = false;
+          let requestCount = 0;
+          let errors = 0;
+
+          // Simulate startup process
+          setTimeout(() => {
+            startupComplete = true;
+            isReady = true;
+            console.log('Application startup completed and ready to serve traffic');
+          }, 15000);
+
+          const server = http.createServer((req, res) => {
+            requestCount++;
+
+            if (req.url === '/health/live') {
+              // Liveness endpoint - checks if app should be restarted
+              if (isHealthy) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'alive',
+                  uptime: process.uptime(),
+                  timestamp: new Date().toISOString()
+                }));
+              } else {
+                res.writeHead(500, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'unhealthy',
+                  uptime: process.uptime(),
+                  timestamp: new Date().toISOString()
+                }));
+              }
+            } else if (req.url === '/health/ready') {
+              // Readiness endpoint - checks if app can serve traffic
+              if (isReady && startupComplete) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'ready',
+                  uptime: process.uptime(),
+                  startupComplete: startupComplete,
+                  timestamp: new Date().toISOString()
+                }));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'not ready',
+                  startupComplete: startupComplete,
+                  message: startupComplete ? 'Service temporarily unavailable' : 'Still starting up',
+                  timestamp: new Date().toISOString()
+                }));
+              }
+            } else if (req.url === '/health/startup') {
+              // Startup endpoint - checks if initial startup is complete
+              if (startupComplete) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'started',
+                  uptime: process.uptime(),
+                  timestamp: new Date().toISOString()
+                }));
+              } else {
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  status: 'starting',
+                  uptime: process.uptime(),
+                  message: 'Startup in progress',
+                  timestamp: new Date().toISOString()
+                }));
+              }
+            } else if (req.url === '/metrics') {
+              // Metrics endpoint for monitoring
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                requests_total: requestCount,
+                errors_total: errors,
+                uptime_seconds: process.uptime(),
+                memory_usage: process.memoryUsage(),
+                healthy: isHealthy,
+                ready: isReady,
+                startup_complete: startupComplete,
+                timestamp: new Date().toISOString()
+              }));
+            } else if (req.url === '/api/data') {
+              // Main application endpoint
+              if (isReady) {
+                res.writeHead(200, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({
+                  message: 'Hello from userX best practices app!',
+                  pod: process.env.HOSTNAME,
+                  timestamp: new Date().toISOString()
+                }));
+              } else {
+                errors++;
+                res.writeHead(503, {'Content-Type': 'application/json'});
+                res.end(JSON.stringify({error: 'Service not ready'}));
+              }
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX Best Practices Health Check Demo</h1>
+                <p>Health Status: ${isHealthy ? 'Healthy' : 'Unhealthy'}</p>
+                <p>Ready Status: ${isReady ? 'Ready' : 'Not Ready'}</p>
+                <p>Startup Status: ${startupComplete ? 'Complete' : 'In Progress'}</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+                <p>Requests: ${requestCount}</p>
+                <p>Errors: ${errors}</p>
+                <p>Pod: ${process.env.HOSTNAME}</p>
+                <hr>
+                <h3>Health Endpoints:</h3>
+                <ul>
+                  <li><a href="/health/live">Liveness Check</a></li>
+                  <li><a href="/health/ready">Readiness Check</a></li>
+                  <li><a href="/health/startup">Startup Check</a></li>
+                  <li><a href="/metrics">Metrics</a></li>
+                  <li><a href="/api/data">API Data</a></li>
+                </ul>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Best practices app started on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        startupProbe:
+          httpGet:
+            path: /health/startup
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 6  # 30 seconds max for startup
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: NODE_ENV
+          value: "production"

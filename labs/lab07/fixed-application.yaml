@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-fixed-app
+  namespace: userX-namespace
+  labels:
+    app: fixed-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fixed-app
+  template:
+    metadata:
+      labels:
+        app: fixed-app
+    spec:
+      containers:
+      - name: fixed-app
+        image: node:18-alpine
+        command: ["sh", "-c"]
+        args:
+        - |
+          cat > server.js << 'EOF'
+          const http = require('http');
+          let healthy = true;
+          let ready = true;
+
+          const server = http.createServer((req, res) => {
+            if (req.url === '/health') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                status: 'healthy',
+                uptime: process.uptime(),
+                message: 'Application is working correctly'
+              }));
+            } else if (req.url === '/ready') {
+              res.writeHead(200, {'Content-Type': 'application/json'});
+              res.end(JSON.stringify({
+                status: 'ready',
+                uptime: process.uptime(),
+                message: 'Ready to serve traffic'
+              }));
+            } else {
+              res.writeHead(200, {'Content-Type': 'text/html'});
+              res.end(`
+                <h1>userX Fixed Application</h1>
+                <p>This application has been fixed and should maintain healthy status</p>
+                <p>Status: Healthy and Ready</p>
+                <p>Uptime: ${process.uptime().toFixed(2)} seconds</p>
+                <p>Pod: ${process.env.HOSTNAME}</p>
+              `);
+            }
+          });
+
+          server.listen(3000, () => {
+            console.log('Fixed application running on port 3000');
+          });
+          EOF
+          node server.js
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"

@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.css">
+    <style>
+        .reveal { font-size: 28px; }
+        .reveal h1 { font-size: 2.2em; color: #2c3e50; }
+        .reveal h2 { font-size: 1.8em; color: #2c3e50; }
+        .reveal h3 { font-size: 1.4em; color: #2c3e50; }
+        .reveal .slides section { text-align: left; }
+        .reveal .slides section.center { text-align: center; }
+        .lab-callout { background: #3498db; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
+        .code-block { background: #f8f9fa; padding: 10px; border-left: 4px solid #007cba; font-family: monospace; font-size: 0.65em; line-height: 1.2; }
+        .architecture-diagram { text-align: center; margin: 15px 0; }
+        .key-point { background: #e8f5e8; padding: 8px; border-left: 4px solid #27ae60; margin: 8px 0; }
+        .warning { background: #fdf2e9; padding: 8px; border-left: 4px solid #e67e22; margin: 8px 0; }
+        .small { font-size: 0.75em; }
+        .smaller { font-size: 0.65em; }
+        .reveal ul { margin: 0.5em 0; }
+        .reveal li { margin: 0.3em 0; }
+        .reveal p { margin: 0.5em 0; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title Slide -->
+            <section class="center">
+                <h1>Amazon EKS Training</h1>
+                <h2>Day 2: Application Deployment and Management</h2>
+                <p>Advanced Kubernetes Operations and Automation</p>
+                <div class="small">
+                    <p>Microservices • Helm • Health Checks • Autoscaling</p>
+                    <p>Duration: 8 hours (including labs)</p>
+                </div>
+            </section>
+
+            <!-- Day 1 Recap -->
+            <section>
+                <h2>Day 1 Recap</h2>
+                <div class="key-point">
+                    <h3>What We Learned Yesterday</h3>
+                    <ul class="smaller">
+                        <li>✅ Kubernetes architecture and EKS fundamentals</li>
+                        <li>✅ Pod lifecycle and basic operations</li>
+                        <li>✅ Service types and networking</li>
+                        <li>✅ Deployments and ReplicaSets</li>
+                        <li>✅ Basic kubectl commands and YAML</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <h3>Today's Building Blocks</h3>
+                    <p>We'll build on yesterday's foundation to create production-ready applications</p>
+                </div>
+            </section>
+
+            <!-- Day 2 Agenda -->
+            <section>
+                <h2>Day 2 Agenda</h2>
+                <ul>
+                    <li><strong>Lab 5:</strong> Deploying Microservices to EKS</li>
+                    <li><strong>Module 2:</strong> Package Management with Helm</li>
+                    <li><strong>Lab 6:</strong> Application Deployment with Helm</li>
+                    <li><strong>Lab 7:</strong> Application Health and Monitoring</li>
+                    <li><strong>Lab 8:</strong> Autoscaling Deep Dive</li>
+                </ul>
+                <div class="key-point">
+                    <strong>Learning Focus:</strong> Production-ready application deployment patterns and operational practices
+                </div>
+            </section>
+
+            <!-- Production Application Challenges -->
+            <section>
+                <h2>Production Application Challenges</h2>
+                <ul>
+                    <li><strong>Complexity</strong>
+                        <ul class="smaller">
+                            <li>Multiple interconnected services</li>
+                            <li>Data persistence and state management</li>
+                            <li>Configuration and secrets management</li>
+                        </ul>
+                    </li>
+                    <li><strong>Reliability</strong>
+                        <ul class="smaller">
+                            <li>Health monitoring and self-healing</li>
+                            <li>Graceful degradation and fault tolerance</li>
+                            <li>Zero-downtime deployments</li>
+                        </ul>
+                    </li>
+                    <li><strong>Scale</strong>
+                        <ul class="smaller">
+                            <li>Dynamic scaling based on demand</li>
+                            <li>Resource optimization and cost control</li>
+                            <li>Performance monitoring and optimization</li>
+                        </ul>
+                    </li>
+                    <li><strong>Operations</strong>
+                        <ul class="smaller">
+                            <li>Automated deployments and rollbacks</li>
+                            <li>Observability and debugging</li>
+                            <li>Security and compliance</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- From Monolith to Microservices -->
+            <section>
+                <h2>From Monolith to Microservices</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Monolithic Application:
+┌─────────────────────────────────────────┐
+│              Single Application         │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
+│  │   UI    │ │Business │ │ Database│   │
+│  │ Layer   │ │ Logic   │ │ Layer   │   │
+│  └─────────┘ └─────────┘ └─────────┘   │
+└─────────────────────────────────────────┘
+
+Microservices Architecture:
+┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
+│Frontend │ │User Mgmt│ │ Orders  │ │Payments │
+│ Service │ │ Service │ │ Service │ │ Service │
+└─────────┘ └─────────┘ └─────────┘ └─────────┘
+     │           │           │           │
+     └───────────┼───────────┼───────────┘
+                 │           │
+        ┌─────────┐ ┌─────────┐
+        │Database │ │Database │
+        │    A    │ │    B    │
+        └─────────┘ └─────────┘
+                    </div>
+                </div>
+            </section>
+
+            <!-- Microservices Benefits and Challenges -->
+            <section>
+                <h2>Microservices: Benefits and Challenges</h2>
+                <div class="key-point">
+                    <h3>Benefits</h3>
+                    <ul class="smaller">
+                        <li><strong>Technology Diversity:</strong> Choose best tools for each service</li>
+                        <li><strong>Independent Deployment:</strong> Deploy services separately</li>
+                        <li><strong>Fault Isolation:</strong> Failures don't cascade</li>
+                        <li><strong>Team Autonomy:</strong> Teams own their services</li>
+                        <li><strong>Scalability:</strong> Scale services independently</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <h3>Challenges</h3>
+                    <ul class="smaller">
+                        <li><strong>Distributed Complexity:</strong> Network calls, latency, failures</li>
+                        <li><strong>Data Consistency:</strong> Managing transactions across services</li>
+                        <li><strong>Service Discovery:</strong> Finding and connecting to services</li>
+                        <li><strong>Testing:</strong> Integration and end-to-end testing complexity</li>
+                        <li><strong>Monitoring:</strong> Observability across multiple services</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Kubernetes for Microservices -->
+            <section>
+                <h2>Kubernetes for Microservices</h2>
+                <ul>
+                    <li><strong>Service Orchestration</strong>
+                        <ul class="smaller">
+                            <li>Automated deployment and scaling</li>
+                            <li>Health monitoring and self-healing</li>
+                            <li>Rolling updates with zero downtime</li>
+                        </ul>
+                    </li>
+                    <li><strong>Service Discovery</strong>
+                        <ul class="smaller">
+                            <li>DNS-based service resolution</li>
+                            <li>Load balancing across instances</li>
+                            <li>Service mesh integration</li>
+                        </ul>
+                    </li>
+                    <li><strong>Configuration Management</strong>
+                        <ul class="smaller">
+                            <li>ConfigMaps for application settings</li>
+                            <li>Secrets for sensitive data</li>
+                            <li>Environment-specific configurations</li>
+                        </ul>
+                    </li>
+                    <li><strong>Resource Management</strong>
+                        <ul class="smaller">
+                            <li>Resource quotas and limits</li>
+                            <li>Horizontal and vertical scaling</li>
+                            <li>Efficient resource utilization</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Application Deployment Patterns -->
+            <section>
+                <h2>Application Deployment Patterns</h2>
+                <ul>
+                    <li><strong>Multi-Tier Architecture</strong>
+                        <ul class="smaller">
+                            <li>Frontend (presentation layer)</li>
+                            <li>Backend APIs (business logic)</li>
+                            <li>Database layer (data persistence)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Sidecar Pattern</strong>
+                        <ul class="smaller">
+                            <li>Helper containers alongside main application</li>
+                            <li>Logging, monitoring, proxy functionality</li>
+                            <li>Service mesh data plane</li>
+                        </ul>
+                    </li>
+                    <li><strong>Ambassador Pattern</strong>
+                        <ul class="smaller">
+                            <li>Proxy for external service communication</li>
+                            <li>Circuit breaker and retry logic</li>
+                            <li>Protocol translation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Adapter Pattern</strong>
+                        <ul class="smaller">
+                            <li>Standardize interfaces between services</li>
+                            <li>Data format transformation</li>
+                            <li>Legacy system integration</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Lab 5 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 5: Deploying Microservices to EKS</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Deploy NodeJS backend API with Redis</li>
+                        <li>Deploy Crystal backend API</li>
+                        <li>Create frontend application</li>
+                        <li>Test end-to-end functionality</li>
+                        <li>Scale microservices independently</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Microservices architecture, inter-service communication</p>
+                </div>
+            </section>
+
+            <!-- Microservices Architecture -->
+            <section>
+                <h2>Microservices Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+    │  Frontend   │    │   NodeJS    │    │   Crystal   │
+    │    (Web)    │───▶│   Backend   │    │   Backend   │
+    │             │    │    (API)    │    │    (API)    │
+    └─────────────┘    └─────────────┘    └─────────────┘
+           │                   │                   │
+           │                   ▼                   │
+           │            ┌─────────────┐            │
+           └───────────▶│    Redis    │◀───────────┘
+                        │  (Database) │
+                        └─────────────┘
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Loose Coupling:</strong> Services communicate via APIs</li>
+                    <li><strong>Independent Scaling:</strong> Scale each service based on demand</li>
+                    <li><strong>Technology Diversity:</strong> Different languages/frameworks</li>
+                    <li><strong>Fault Isolation:</strong> Failure in one service doesn't break others</li>
+                </ul>
+            </section>
+
+            <!-- Service Communication Patterns -->
+            <section>
+                <h2>Service Communication Patterns</h2>
+                <ul>
+                    <li><strong>Synchronous Communication</strong>
+                        <ul class="smaller">
+                            <li>HTTP/REST APIs</li>
+                            <li>gRPC for high performance</li>
+                            <li>Direct service-to-service calls</li>
+                        </ul>
+                    </li>
+                    <li><strong>Asynchronous Communication</strong>
+                        <ul class="smaller">
+                            <li>Message queues (RabbitMQ, SQS)</li>
+                            <li>Event streaming (Kafka, Kinesis)</li>
+                            <li>Pub/Sub patterns</li>
+                        </ul>
+                    </li>
+                    <li><strong>Service Discovery</strong>
+                        <ul class="smaller">
+                            <li>Kubernetes DNS</li>
+                            <li>Service mesh (Istio, Linkerd)</li>
+                            <li>External discovery services</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- ConfigMaps and Secrets -->
+            <section>
+                <h2>Configuration Management</h2>
+                <div class="code-block smaller">
+# ConfigMap Example
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+data:
+  database_url: "redis://redis-service:6379"
+  log_level: "info"
+  feature_flags: |
+    feature1=true
+    feature2=false
+                </div>
+                <div class="code-block smaller">
+# Secret Example
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+data:
+  api_key: YWJjZGVmZ2hpamtsbW5vcA==  # base64 encoded
+  password: c2VjcmV0cGFzc3dvcmQ=       # base64 encoded
+                </div>
+            </section>
+
+            <!-- Environment Variables -->
+            <section>
+                <h2>Environment Variables</h2>
+                <div class="code-block smaller">
+spec:
+  containers:
+  - name: app
+    image: myapp:latest
+    env:
+    # Direct value
+    - name: NODE_ENV
+      value: "production"
+    # From ConfigMap
+    - name: DATABASE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: app-config
+          key: database_url
+    # From Secret
+    - name: API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: app-secrets
+          key: api_key
+    # Field reference
+    - name: POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+                </div>
+            </section>
+
+            <!-- Multi-tier Application Deployment -->
+            <section>
+                <h2>Multi-tier Application Deployment</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+Internet ─── LoadBalancer ─── Frontend (3 replicas)
+                                  │
+                             ClusterIP Service
+                                  │
+                            ┌─────┴─────┐
+                            │           │
+                    NodeJS Backend  Crystal Backend
+                    (2 replicas)    (1 replica)
+                            │           │
+                       ClusterIP   ClusterIP
+                            │           │
+                            └─────┬─────┘
+                                  │
+                              Redis DB
+                            (1 replica)
+                    </div>
+                </div>
+            </section>
+
+            <!-- Container Resource Patterns -->
+            <section>
+                <h2>Container Resource Patterns</h2>
+                <ul>
+                    <li><strong>Frontend (Web Servers)</strong>
+                        <ul class="smaller">
+                            <li>Low CPU, moderate memory</li>
+                            <li>Scale based on user traffic</li>
+                            <li>Stateless, easy to scale horizontally</li>
+                        </ul>
+                    </li>
+                    <li><strong>API Backends</strong>
+                        <ul class="smaller">
+                            <li>Variable CPU, moderate memory</li>
+                            <li>Scale based on request volume</li>
+                            <li>Consider connection pooling</li>
+                        </ul>
+                    </li>
+                    <li><strong>Databases</strong>
+                        <ul class="smaller">
+                            <li>High memory, moderate CPU</li>
+                            <li>Often stateful, careful scaling</li>
+                            <li>Persistent storage requirements</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Introduction to Helm -->
+            <section>
+                <h2>Introduction to Helm</h2>
+                <ul>
+                    <li><strong>What is Helm?</strong>
+                        <ul class="smaller">
+                            <li>Package manager for Kubernetes</li>
+                            <li>Templating engine for YAML</li>
+                            <li>Release management and versioning</li>
+                        </ul>
+                    </li>
+                    <li><strong>Core Concepts</strong>
+                        <ul class="smaller">
+                            <li><strong>Chart:</strong> Helm package containing templates</li>
+                            <li><strong>Release:</strong> Instance of a chart in a cluster</li>
+                            <li><strong>Repository:</strong> Collection of charts</li>
+                        </ul>
+                    </li>
+                    <li><strong>Benefits</strong>
+                        <ul class="smaller">
+                            <li>Reusable application packages</li>
+                            <li>Environment-specific configurations</li>
+                            <li>Rollback capabilities</li>
+                            <li>Dependency management</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Helm Architecture -->
+            <section>
+                <h2>Helm Architecture</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+    │    Helm     │    │   Chart     │    │ Repository  │
+    │   Client    │───▶│ Templates   │───▶│  (Remote)   │
+    │             │    │             │    │             │
+    └─────────────┘    └─────────────┘    └─────────────┘
+           │                   │
+           ▼                   ▼
+    ┌─────────────┐    ┌─────────────┐
+    │ Kubernetes  │    │  Release    │
+    │   Cluster   │◀───│   Store     │
+    │             │    │   (Secret)  │
+    └─────────────┘    └─────────────┘
+                    </div>
+                </div>
+                <p class="smaller">Helm 3 runs client-side only, no server component (Tiller) required</p>
+            </section>
+
+            <!-- Helm Chart Structure -->
+            <section>
+                <h2>Helm Chart Structure</h2>
+                <div class="code-block smaller">
+mychart/
+├── Chart.yaml          # Chart metadata
+├── values.yaml         # Default configuration values
+├── charts/            # Dependencies
+├── templates/         # Kubernetes templates
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── configmap.yaml
+│   ├── _helpers.tpl   # Template helpers
+│   └── NOTES.txt      # Post-install notes
+└── .helmignore        # Files to ignore
+                </div>
+                <ul class="smaller">
+                    <li><strong>Chart.yaml:</strong> Chart metadata and dependencies</li>
+                    <li><strong>values.yaml:</strong> Default configuration values</li>
+                    <li><strong>templates/:</strong> Kubernetes YAML templates</li>
+                </ul>
+            </section>
+
+            <!-- Helm Templates -->
+            <section>
+                <h2>Helm Templates</h2>
+                <div class="code-block smaller">
+# templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mychart.fullname" . }}
+  labels:
+    {{- include "mychart.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "mychart.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "mychart.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+                </div>
+            </section>
+
+            <!-- Helm Values -->
+            <section>
+                <h2>Helm Values</h2>
+                <div class="code-block smaller">
+# values.yaml
+replicaCount: 3
+
+image:
+  repository: nginx
+  tag: "1.21"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 100
+  targetCPUUtilizationPercentage: 80
+                </div>
+            </section>
+
+            <!-- Helm Commands -->
+            <section>
+                <h2>Essential Helm Commands</h2>
+                <div class="code-block smaller">
+# Add repository
+helm repo add stable https://charts.helm.sh/stable
+
+# Search charts
+helm search repo nginx
+
+# Install chart
+helm install my-nginx stable/nginx-ingress
+
+# Install with custom values
+helm install my-app ./mychart -f custom-values.yaml
+
+# Upgrade release
+helm upgrade my-app ./mychart
+
+# Rollback release
+helm rollback my-app 1
+
+# List releases
+helm list
+
+# Uninstall release
+helm uninstall my-app
+                </div>
+            </section>
+
+            <!-- Lab 6 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 6: Application Deployment with Helm</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Search and explore Helm charts</li>
+                        <li>Deploy applications using existing charts</li>
+                        <li>Customize deployments with values files</li>
+                        <li>Create a simple custom Helm chart</li>
+                        <li>Practice upgrade and rollback operations</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Helm package management, templating, releases</p>
+                </div>
+            </section>
+
+            <!-- Health Checks Overview -->
+            <section>
+                <h2>Application Health Checks</h2>
+                <ul>
+                    <li><strong>Liveness Probes</strong>
+                        <ul class="smaller">
+                            <li>Determines if container is running</li>
+                            <li>Restart container if probe fails</li>
+                            <li>Use for detecting deadlocks or crashes</li>
+                        </ul>
+                    </li>
+                    <li><strong>Readiness Probes</strong>
+                        <ul class="smaller">
+                            <li>Determines if container is ready for traffic</li>
+                            <li>Remove from service endpoints if fails</li>
+                            <li>Use during startup or temporary unavailability</li>
+                        </ul>
+                    </li>
+                    <li><strong>Startup Probes</strong>
+                        <ul class="smaller">
+                            <li>For slow-starting containers</li>
+                            <li>Disables other probes until succeeds</li>
+                            <li>Prevents premature container restarts</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Probe Types -->
+            <section>
+                <h2>Probe Types</h2>
+                <div class="code-block smaller">
+# HTTP Probe
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+# TCP Probe
+readinessProbe:
+  tcpSocket:
+    port: 5432
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# Command Probe
+livenessProbe:
+  exec:
+    command:
+    - cat
+    - /tmp/healthy
+  initialDelaySeconds: 5
+  periodSeconds: 5
+                </div>
+            </section>
+
+            <!-- Probe Configuration -->
+            <section>
+                <h2>Probe Configuration Parameters</h2>
+                <ul>
+                    <li><strong>initialDelaySeconds</strong>
+                        <ul class="smaller">
+                            <li>Wait time before first probe</li>
+                            <li>Allow application startup time</li>
+                            <li>Typical: 10-30 seconds</li>
+                        </ul>
+                    </li>
+                    <li><strong>periodSeconds</strong>
+                        <ul class="smaller">
+                            <li>How often to perform probe</li>
+                            <li>Default: 10 seconds</li>
+                            <li>Balance between responsiveness and overhead</li>
+                        </ul>
+                    </li>
+                    <li><strong>timeoutSeconds</strong>
+                        <ul class="smaller">
+                            <li>Timeout for probe request</li>
+                            <li>Default: 1 second</li>
+                            <li>Should be less than periodSeconds</li>
+                        </ul>
+                    </li>
+                    <li><strong>failureThreshold</strong>
+                        <ul class="smaller">
+                            <li>Failures before considering probe failed</li>
+                            <li>Default: 3 attempts</li>
+                            <li>Prevents false positives from transient issues</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Health Check Best Practices -->
+            <section>
+                <h2>Health Check Best Practices</h2>
+                <ul>
+                    <li><strong>Endpoint Design</strong>
+                        <ul class="smaller">
+                            <li>Lightweight health check endpoints</li>
+                            <li>Check critical dependencies</li>
+                            <li>Return appropriate HTTP status codes</li>
+                        </ul>
+                    </li>
+                    <li><strong>Probe Configuration</strong>
+                        <ul class="smaller">
+                            <li>Set realistic timeouts</li>
+                            <li>Use different endpoints for liveness vs readiness</li>
+                            <li>Consider application startup time</li>
+                        </ul>
+                    </li>
+                    <li><strong>Monitoring</strong>
+                        <ul class="smaller">
+                            <li>Monitor probe success rates</li>
+                            <li>Alert on frequent restarts</li>
+                            <li>Log probe failures for debugging</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Lab 7 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 7: Application Health and Monitoring</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Configure liveness probes for restarts</li>
+                        <li>Set up readiness probes for traffic management</li>
+                        <li>Test probe behavior with broken applications</li>
+                        <li>Monitor application health through events</li>
+                        <li>Implement best practices for health checks</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Health monitoring, probe configuration, debugging</p>
+                </div>
+            </section>
+
+            <!-- Autoscaling Introduction -->
+            <section>
+                <h2>Kubernetes Autoscaling</h2>
+                <ul>
+                    <li><strong>Horizontal Pod Autoscaler (HPA)</strong>
+                        <ul class="smaller">
+                            <li>Scales number of pod replicas</li>
+                            <li>Based on CPU, memory, or custom metrics</li>
+                            <li>Automatic scale up and down</li>
+                        </ul>
+                    </li>
+                    <li><strong>Vertical Pod Autoscaler (VPA)</strong>
+                        <ul class="smaller">
+                            <li>Adjusts CPU and memory requests/limits</li>
+                            <li>Right-sizes containers automatically</li>
+                            <li>Requires pod restart for changes</li>
+                        </ul>
+                    </li>
+                    <li><strong>Cluster Autoscaler (CA)</strong>
+                        <ul class="smaller">
+                            <li>Adds/removes worker nodes</li>
+                            <li>Responds to pod scheduling failures</li>
+                            <li>Removes underutilized nodes</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- HPA Deep Dive -->
+            <section>
+                <h2>Horizontal Pod Autoscaler (HPA)</h2>
+                <div class="code-block smaller">
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: php-apache
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: php-apache
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+                </div>
+            </section>
+
+            <!-- HPA Scaling Algorithm -->
+            <section>
+                <h2>HPA Scaling Algorithm</h2>
+                <div class="architecture-diagram">
+                    <div class="code-block smaller">
+desiredReplicas = ceil[currentReplicas * (currentMetricValue / desiredMetricValue)]
+
+Example:
+- Current replicas: 3
+- Current CPU: 200m
+- Target CPU: 100m
+- Desired replicas: ceil[3 * (200/100)] = ceil[6] = 6
+                    </div>
+                </div>
+                <ul class="smaller">
+                    <li><strong>Scale Up:</strong> When metrics exceed target for 3 minutes</li>
+                    <li><strong>Scale Down:</strong> When metrics below target for 5 minutes</li>
+                    <li><strong>Stabilization:</strong> Prevents thrashing with cooldown periods</li>
+                    <li><strong>Max Change:</strong> Limited percent increase per scaling event</li>
+                </ul>
+            </section>
+
+            <!-- HPA Metrics Types -->
+            <section>
+                <h2>HPA Metrics Types</h2>
+                <ul>
+                    <li><strong>Resource Metrics</strong>
+                        <ul class="smaller">
+                            <li>CPU and memory utilization</li>
+                            <li>Based on requests in pod spec</li>
+                            <li>Built into Kubernetes</li>
+                        </ul>
+                    </li>
+                    <li><strong>Custom Metrics</strong>
+                        <ul class="smaller">
+                            <li>Application-specific metrics</li>
+                            <li>Requires custom metrics API</li>
+                            <li>Examples: queue length, request rate</li>
+                        </ul>
+                    </li>
+                    <li><strong>External Metrics</strong>
+                        <ul class="smaller">
+                            <li>Metrics from external systems</li>
+                            <li>Cloud provider metrics</li>
+                            <li>Third-party monitoring systems</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Metrics Server -->
+            <section>
+                <h2>Metrics Server</h2>
+                <ul>
+                    <li><strong>Purpose</strong>
+                        <ul class="smaller">
+                            <li>Collects resource metrics from kubelets</li>
+                            <li>Provides metrics API for HPA and VPA</li>
+                            <li>Enables kubectl top commands</li>
+                        </ul>
+                    </li>
+                    <li><strong>Data Source</strong>
+                        <ul class="smaller">
+                            <li>cAdvisor on each node</li>
+                            <li>Short-term, in-memory storage</li>
+                            <li>15-second collection interval</li>
+                        </ul>
+                    </li>
+                    <li><strong>Installation</strong>
+                        <ul class="smaller">
+                            <li>Pre-installed in managed EKS</li>
+                            <li>Available as Kubernetes add-on</li>
+                            <li>Required for resource-based autoscaling</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- HPA Behavior Configuration -->
+            <section>
+                <h2>HPA Behavior Configuration</h2>
+                <div class="code-block smaller">
+behavior:
+  scaleUp:
+    stabilizationWindowSeconds: 300
+    policies:
+    - type: Percent
+      value: 100
+      periodSeconds: 15
+    - type: Pods
+      value: 4
+      periodSeconds: 15
+    selectPolicy: Max
+  scaleDown:
+    stabilizationWindowSeconds: 300
+    policies:
+    - type: Percent
+      value: 10
+      periodSeconds: 60
+    selectPolicy: Min
+                </div>
+                <ul class="smaller">
+                    <li><strong>Stabilization Windows:</strong> Prevent rapid scaling changes</li>
+                    <li><strong>Scaling Policies:</strong> Control rate of scaling</li>
+                    <li><strong>Select Policy:</strong> How to choose among multiple policies</li>
+                </ul>
+            </section>
+
+            <!-- Load Testing for Autoscaling -->
+            <section>
+                <h2>Load Testing for Autoscaling</h2>
+                <div class="code-block smaller">
+# Simple load generator
+kubectl run -i --tty load-generator --rm --image=busybox:1.35 --restart=Never -- /bin/sh
+
+# Inside the container:
+while true; do wget -q -O- http://php-apache/; done
+
+# Or using multiple connections:
+for i in {1..10}; do
+  (while true; do wget -q -O- http://php-apache/; done) &
+done
+                </div>
+                <ul class="smaller">
+                    <li><strong>CPU Load:</strong> Compute-intensive operations</li>
+                    <li><strong>Memory Load:</strong> Large data structures</li>
+                    <li><strong>Concurrent Requests:</strong> Multiple load generators</li>
+                    <li><strong>Realistic Patterns:</strong> Mimic production traffic</li>
+                </ul>
+            </section>
+
+            <!-- Monitoring Autoscaling -->
+            <section>
+                <h2>Monitoring Autoscaling</h2>
+                <div class="code-block smaller">
+# Watch HPA status
+kubectl get hpa -w
+
+# Describe HPA for detailed info
+kubectl describe hpa php-apache
+
+# Check HPA events
+kubectl get events --sort-by=.metadata.creationTimestamp
+
+# Monitor pod scaling
+kubectl get pods -l app=php-apache -w
+
+# Check resource usage
+kubectl top pods
+kubectl top nodes
+                </div>
+            </section>
+
+            <!-- Lab 8 Callout -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Lab 8: Autoscaling Deep Dive</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Explore kube-ops-view for cluster visualization</li>
+                        <li>Configure HPA based on CPU metrics</li>
+                        <li>Generate load to trigger autoscaling</li>
+                        <li>Observe HPA behavior and decisions</li>
+                        <li>Test memory-based autoscaling</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Autoscaling configuration, load testing, monitoring</p>
+                </div>
+            </section>
+
+            <!-- Autoscaling Best Practices -->
+            <section>
+                <h2>Autoscaling Best Practices</h2>
+                <ul>
+                    <li><strong>Resource Requests</strong>
+                        <ul class="smaller">
+                            <li>Always specify CPU/memory requests</li>
+                            <li>HPA uses requests for percentage calculations</li>
+                            <li>Right-size based on actual usage patterns</li>
+                        </ul>
+                    </li>
+                    <li><strong>Scaling Boundaries</strong>
+                        <ul class="smaller">
+                            <li>Set appropriate min/max replicas</li>
+                            <li>Consider cost vs. performance trade-offs</li>
+                            <li>Account for startup and shutdown times</li>
+                        </ul>
+                    </li>
+                    <li><strong>Multiple Metrics</strong>
+                        <ul class="smaller">
+                            <li>Use both CPU and memory when appropriate</li>
+                            <li>Consider custom metrics for better scaling</li>
+                            <li>Be cautious with conflicting metrics</li>
+                        </ul>
+                    </li>
+                    <li><strong>Testing</strong>
+                        <ul class="smaller">
+                            <li>Test scaling behavior under load</li>
+                            <li>Validate scale-down behavior</li>
+                            <li>Monitor for scaling thrashing</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Production Considerations -->
+            <section>
+                <h2>Production Considerations</h2>
+                <ul>
+                    <li><strong>Resource Planning</strong>
+                        <ul class="smaller">
+                            <li>Cluster capacity planning</li>
+                            <li>Node autoscaling integration</li>
+                            <li>Cost monitoring and budgets</li>
+                        </ul>
+                    </li>
+                    <li><strong>Application Design</strong>
+                        <ul class="smaller">
+                            <li>Stateless application design</li>
+                            <li>Graceful shutdown handling</li>
+                            <li>Health check implementation</li>
+                        </ul>
+                    </li>
+                    <li><strong>Monitoring and Alerting</strong>
+                        <ul class="smaller">
+                            <li>HPA performance metrics</li>
+                            <li>Resource utilization trends</li>
+                            <li>Scaling event notifications</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Performance Optimization -->
+            <section>
+                <h2>Performance Optimization</h2>
+                <ul>
+                    <li><strong>Container Optimization</strong>
+                        <ul class="smaller">
+                            <li>Optimize container images</li>
+                            <li>Reduce startup times</li>
+                            <li>Implement proper health checks</li>
+                        </ul>
+                    </li>
+                    <li><strong>Resource Allocation</strong>
+                        <ul class="smaller">
+                            <li>Right-size resource requests/limits</li>
+                            <li>Use resource quotas and limits</li>
+                            <li>Monitor resource waste</li>
+                        </ul>
+                    </li>
+                    <li><strong>Scaling Efficiency</strong>
+                        <ul class="smaller">
+                            <li>Tune HPA parameters</li>
+                            <li>Implement predictive scaling</li>
+                            <li>Use multiple scaling metrics</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Troubleshooting Common Issues -->
+            <section>
+                <h2>Troubleshooting Common Issues</h2>
+                <ul>
+                    <li><strong>Scaling Issues</strong>
+                        <ul class="smaller">
+                            <li>HPA not scaling: Check metrics server and resource requests</li>
+                            <li>Thrashing: Adjust stabilization windows</li>
+                            <li>Slow scaling: Review scaling policies</li>
+                        </ul>
+                    </li>
+                    <li><strong>Resource Issues</strong>
+                        <ul class="smaller">
+                            <li>Node capacity: Monitor node resources</li>
+                            <li>Pod scheduling: Check node selectors and taints</li>
+                            <li>Resource limits: Review container resource configuration</li>
+                        </ul>
+                    </li>
+                    <li><strong>Health Check Issues</strong>
+                        <ul class="smaller">
+                            <li>Probe failures: Check endpoint responses</li>
+                            <li>Timeout issues: Adjust probe timing</li>
+                            <li>False positives: Review probe logic</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Day 2 Summary -->
+            <section>
+                <h2>Day 2 Summary</h2>
+                <div class="key-point">
+                    <h3>What We Accomplished Today</h3>
+                    <ul class="smaller">
+                        <li>✅ Deployed complete microservices architecture</li>
+                        <li>✅ Mastered Helm package management</li>
+                        <li>✅ Implemented comprehensive health checks</li>
+                        <li>✅ Configured horizontal pod autoscaling</li>
+                        <li>✅ Practiced production-ready patterns</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <h3>Tomorrow's Advanced Topics</h3>
+                    <ul class="smaller">
+                        <li>🔐 RBAC and security implementation</li>
+                        <li>🌐 Network policies and isolation</li>
+                        <li>🏗️ Node management and workload placement</li>
+                        <li>💾 Stateful applications and storage</li>
+                        <li>🔧 Advanced troubleshooting techniques</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Q&A -->
+            <section class="center">
+                <h1>Questions & Discussion</h1>
+                <div class="key-point">
+                    <h3>Key Topics for Discussion</h3>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Microservices architecture decisions</li>
+                        <li>Helm templating and best practices</li>
+                        <li>Health check strategies</li>
+                        <li>Autoscaling configuration and tuning</li>
+                        <li>Production deployment challenges</li>
+                    </ul>
+                </div>
+                <p><strong>Tomorrow:</strong> Security, networking, and advanced operations</p>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            controls: true,
+            progress: true,
+            center: false,
+            transition: 'slide'
+        });
+    </script>
+</body>
+</html>
