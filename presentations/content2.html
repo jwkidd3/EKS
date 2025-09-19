@@ -112,26 +112,15 @@
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
 Monolithic Application:
-┌─────────────────────────────────────────┐
-│              Single Application         │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐   │
-│  │   UI    │ │Business │ │ Database│   │
-│  │ Layer   │ │ Logic   │ │ Layer   │   │
-│  └─────────┘ └─────────┘ └─────────┘   │
-└─────────────────────────────────────────┘
+    [Single Application Container]
+    [UI Layer] [Business Logic] [Database Layer]
 
 Microservices Architecture:
-┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐
-│Frontend │ │User Mgmt│ │ Orders  │ │Payments │
-│ Service │ │ Service │ │ Service │ │ Service │
-└─────────┘ └─────────┘ └─────────┘ └─────────┘
-     │           │           │           │
-     └───────────┼───────────┼───────────┘
-                 │           │
-        ┌─────────┐ ┌─────────┐
-        │Database │ │Database │
-        │    A    │ │    B    │
-        └─────────┘ └─────────┘
+[Frontend] [User Mgmt] [Orders] [Payments]
+     |         |         |        |
+     +----+----+----+----+        |
+          |         |              |
+      [Database A] [Database B]
                     </div>
                 </div>
             </section>
@@ -253,17 +242,12 @@ Microservices Architecture:
                 <h2>Microservices Architecture</h2>
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
-    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-    │  Frontend   │    │   NodeJS    │    │   Crystal   │
-    │    (Web)    │───▶│   Backend   │    │   Backend   │
-    │             │    │    (API)    │    │    (API)    │
-    └─────────────┘    └─────────────┘    └─────────────┘
-           │                   │                   │
-           │                   ▼                   │
-           │            ┌─────────────┐            │
-           └───────────▶│    Redis    │◀───────────┘
-                        │  (Database) │
-                        └─────────────┘
+  [Frontend]  -->  [NodeJS]     [Crystal]
+     (Web)          Backend       Backend
+       |               |             |
+       |               v             |
+       +----------> [Redis] <--------+
+                   (Database)
                     </div>
                 </div>
                 <ul class="smaller">

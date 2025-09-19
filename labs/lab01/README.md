@@ -3,53 +3,19 @@
 ## Duration: 30 minutes
 
 ## Objectives
-- Install and configure eksctl and kubectl
+- Install and configure kubectl for cluster access
 - Connect to shared EKS cluster in us-east-1
 - Explore existing cluster components and namespaces
 - Create personal namespace for isolation (userX-namespace)
 - Verify cluster access and basic kubectl commands
 
 ## Prerequisites
-- AWS Account access with provided credentials
-- Terminal/command line access
-- Internet connectivity
+- Access to AWS Cloud9 environment with provided credentials
 - Your assigned username (user1, user2, etc.)
 
 ## Instructions
 
 ### Step 1: Install Required Tools
-
-#### Install eksctl
-Choose the installation method for your operating system:
-
-**For macOS:**
-```bash
-# Using Homebrew (recommended)
-brew tap weaveworks/tap
-brew install weaveworks/tap/eksctl
-
-# Verify installation
-eksctl version
-```
-
-**For Linux:**
-```bash
-# Download and install eksctl
-curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
-sudo mv /tmp/eksctl /usr/local/bin
-
-# Verify installation
-eksctl version
-```
-
-**For Windows (using PowerShell):**
-```powershell
-# Using Chocolatey
-choco install eksctl
-
-# Or download manually from GitHub releases
-# https://github.com/weaveworks/eksctl/releases
-```
 
 #### Install kubectl
 **For macOS:**
@@ -81,21 +47,24 @@ choco install kubernetes-cli
 # Or download from https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/
 ```
 
-### Step 2: Configure AWS Credentials
-Set up your AWS credentials to access the shared EKS cluster:
+#### Verify AWS CLI (pre-installed in Cloud9)
+```bash
+# AWS CLI is pre-installed in Cloud9 - just verify it's working
+aws --version
+
+# Verify your AWS identity
+aws sts get-caller-identity
+```
+
+### Step 2: Verify AWS Access
+Your AWS credentials are already configured in Cloud9:
 
 ```bash
-# Configure AWS CLI with provided credentials
-aws configure
-
-# You will be prompted for:
-# AWS Access Key ID: [Provided by instructor]
-# AWS Secret Access Key: [Provided by instructor]
-# Default region name: us-east-1
-# Default output format: json
-
 # Verify AWS configuration
 aws sts get-caller-identity
+
+# Check current region
+aws configure get region
 ```
 
 **Expected Output**: You should see your AWS account ID, user ARN, and user ID.
@@ -287,8 +256,8 @@ kubectl cluster-info dump
 # Re-configure cluster access if needed
 aws eks update-kubeconfig --region us-east-1 --name training-cluster
 
-# Check eksctl connectivity
-eksctl get cluster --region us-east-1
+# View available clusters (read-only)
+aws eks list-clusters --region us-east-1
 ```
 
 ## Key Takeaways

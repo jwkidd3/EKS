@@ -85,26 +85,15 @@
                 <h2>Kubernetes Architecture</h2>
                 <div class="architecture-diagram">
                     <div class="code-block">
-┌─────────────────────────────────────────────────────────┐
-│                   Control Plane                        │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐      │
-│  │  API Server │ │    etcd     │ │  Scheduler  │      │
-│  └─────────────┘ └─────────────┘ └─────────────┘      │
-│  ┌─────────────┐ ┌─────────────┐                       │
-│  │ Controller  │ │ Cloud Ctrl  │                       │
-│  │   Manager   │ │   Manager   │                       │
-│  └─────────────┘ └─────────────┘                       │
-└─────────────────────────────────────────────────────────┘
-           │                    │                    │
-┌──────────▼──────────┐ ┌───────▼───────┐ ┌─────────▼────────┐
-│    Worker Node 1    │ │ Worker Node 2 │ │  Worker Node 3   │
-│  ┌───────────────┐  │ │ ┌───────────┐ │ │ ┌──────────────┐ │
-│  │    kubelet    │  │ │ │  kubelet  │ │ │ │   kubelet    │ │
-│  │ ┌───────────┐ │  │ │ │┌─────────┐│ │ │ │┌────────────┐│ │
-│  │ │    Pod    │ │  │ │ ││   Pod   ││ │ │ ││    Pod     ││ │
-│  │ └───────────┘ │  │ │ │└─────────┘│ │ │ │└────────────┘│ │
-│  └───────────────┘  │ │ └───────────┘ │ │ └──────────────┘ │
-└─────────────────────┘ └───────────────┘ └──────────────────┘
+                    CONTROL PLANE
+    [API Server]  [etcd]  [Scheduler]
+    [Controller Manager]  [Cloud Controller]
+                         |
+            +------------+------------+
+            |            |            |
+       Worker Node   Worker Node   Worker Node
+       [kubelet]     [kubelet]     [kubelet]
+       [Pod Pod]     [Pod Pod]     [Pod Pod]
                     </div>
                 </div>
             </section>
@@ -247,9 +236,9 @@ spec:
                 <h2>Pod Lifecycle</h2>
                 <div class="architecture-diagram">
                     <div class="code-block">
-                Pending → Running → Succeeded/Failed
-                    ↓         ↓           ↓
-                Scheduled   Ready      Terminated
+    Pending --> Running --> Succeeded/Failed
+       |           |              |
+   Scheduled     Ready       Terminated
                     </div>
                 </div>
                 <ul>
@@ -330,13 +319,13 @@ MY_SERVICE_SERVICE_PORT
                 <h2>Deployments and ReplicaSets</h2>
                 <div class="architecture-diagram">
                     <div class="code-block">
-        Deployment
-            │
-            ▼
-        ReplicaSet ──────► ReplicaSet (old)
-            │
-            ▼
-      Pod   Pod   Pod
+    Deployment
+        |
+        v
+    ReplicaSet -----> ReplicaSet (old)
+        |
+        v
+    Pod Pod Pod
                     </div>
                 </div>
                 <ul>
@@ -420,26 +409,15 @@ spec:
                 <h2>EKS Architecture</h2>
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
-┌─────────────────────────────────────────────────────────┐
-│                    AWS Cloud                           │
-│  ┌─────────────────────────────────────────────────┐    │
-│  │               EKS Control Plane                │    │
-│  │        (Managed by AWS)                        │    │
-│  │  ┌─────────┐ ┌─────────┐ ┌─────────┐          │    │
-│  │  │   AZ1   │ │   AZ2   │ │   AZ3   │          │    │
-│  │  │API Svr  │ │API Svr  │ │API Svr  │          │    │
-│  │  │  etcd   │ │  etcd   │ │  etcd   │          │    │
-│  │  └─────────┘ └─────────┘ └─────────┘          │    │
-│  └─────────────────────────────────────────────────┘    │
-│           │              │              │               │
-│  ┌────────▼──────┐ ┌─────▼─────┐ ┌──────▼──────┐        │
-│  │  Worker Node  │ │Worker Node│ │ Worker Node │        │
-│  │   (EC2/Fargate)│ │(EC2/Fargate)│ │(EC2/Fargate)│       │
-│  │  ┌─────────┐  │ │ ┌───────┐ │ │ ┌─────────┐ │        │
-│  │  │  Pods   │  │ │ │ Pods  │ │ │ │  Pods   │ │        │
-│  │  └─────────┘  │ │ └───────┘ │ │ └─────────┘ │        │
-│  └───────────────┘ └───────────┘ └─────────────┘        │
-└─────────────────────────────────────────────────────────┘
+                AWS Cloud
+        EKS Control Plane (Managed)
+    [AZ1: API+etcd] [AZ2: API+etcd] [AZ3: API+etcd]
+                         |
+            +------------+------------+
+            |            |            |
+     Worker Node    Worker Node    Worker Node
+    (EC2/Fargate)  (EC2/Fargate)  (EC2/Fargate)
+      [Pods]         [Pods]         [Pods]
                     </div>
                 </div>
             </section>
@@ -729,10 +707,10 @@ spec:
                 <h2>Rolling Updates</h2>
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
-Step 1: [Old Pod] [Old Pod] [Old Pod]
-Step 2: [Old Pod] [Old Pod] [New Pod]
-Step 3: [Old Pod] [New Pod] [New Pod]
-Step 4: [New Pod] [New Pod] [New Pod]
+Step 1: [Old] [Old] [Old]
+Step 2: [Old] [Old] [New]
+Step 3: [Old] [New] [New]
+Step 4: [New] [New] [New]
                     </div>
                 </div>
                 <ul>

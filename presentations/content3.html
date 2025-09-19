@@ -84,16 +84,12 @@
                 <h2>Kubernetes Security Model</h2>
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
-    ┌─────────────────────────────────────────────────┐
-    │                 API Server                      │
-    │  ┌─────────────┐ ┌─────────────┐ ┌──────────┐   │
-    │  │Authentication│ │Authorization│ │Admission │   │
-    │  │   (AuthN)    │ │   (AuthZ)   │ │ Control  │   │
-    │  └─────────────┘ └─────────────┘ └──────────┘   │
-    └─────────────────────────────────────────────────┘
-              │                │               │
-              ▼                ▼               ▼
-         Who are you?    What can you do?  Is it allowed?
+                API Server
+    [Authentication] [Authorization] [Admission]
+         (AuthN)         (AuthZ)      Control
+            |               |            |
+            v               v            v
+       Who are you?   What can you do? Is it allowed?
          - Certificates   - RBAC           - Policies
          - Tokens        - ABAC           - Quotas
          - Identity      - Webhook        - Security
@@ -170,21 +166,14 @@
                 <h2>RBAC Architecture</h2>
                 <div class="architecture-diagram">
                     <div class="code-block smaller">
-    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-    │   Subject   │    │    Role     │    │  Resources  │
-    │             │    │             │    │             │
-    │ • User      │───▶│ • Verbs     │───▶│ • Pods      │
-    │ • Group     │    │ • Resources │    │ • Services  │
-    │ • ServiceAcc│    │ • Namespaces│    │ • Secrets   │
-    └─────────────┘    └─────────────┘    └─────────────┘
-           │                   ▲
-           │            ┌─────────────┐
-           └───────────▶│   Binding   │
-                        │             │
-                        │ Links       │
-                        │ Subject     │
-                        │ to Role     │
-                        └─────────────┘
+  [Subject]  -->  [Role]  -->  [Resources]
+   • User          • Verbs        • Pods
+   • Group         • Resources    • Services
+   • ServiceAcc    • Namespaces   • Secrets
+       |               ^
+       |         [Binding]
+       +-------> Links Subject
+                 to Role
                     </div>
                 </div>
             </section>
