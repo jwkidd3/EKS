@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-problematic-app
+  namespace: userX-namespace
+  labels:
+    app: problematic-app
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: problematic-app
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: problematic-app
+        owner: userX
+    spec:
+      containers:
+      - name: problematic-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        # Intentionally problematic configuration for troubleshooting
+        env:
+        - name: MISSING_CONFIG
+          valueFrom:
+            configMapKeyRef:
+              name: nonexistent-config
+              key: missing-key
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        # Problematic health check
+        livenessProbe:
+          httpGet:
+            path: /nonexistent-health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10

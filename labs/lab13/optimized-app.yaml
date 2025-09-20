@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-optimized-app
+  namespace: userX-namespace
+  labels:
+    app: optimized-app
+    owner: userX
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: optimized-app
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: optimized-app
+        owner: userX
+    spec:
+      containers:
+      - name: optimized-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: OPTIMIZED
+          value: "true"
+        - name: PERFORMANCE_MODE
+          value: "high"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 3
+          periodSeconds: 5
+          timeoutSeconds: 2
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        # Optimized resource management
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 101
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true

@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-blue-green-service
+  namespace: userX-namespace
+  labels:
+    app: blue-green
+    owner: userX
+spec:
+  selector:
+    app: blue-green
+    version: blue  # Initially points to blue version
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-blue-green-lb
+  namespace: userX-namespace
+  labels:
+    app: blue-green-lb
+    owner: userX
+spec:
+  selector:
+    app: blue-green
+    version: blue  # Initially points to blue version
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  type: LoadBalancer

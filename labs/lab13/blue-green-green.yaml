@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-blue-green-green
+  namespace: userX-namespace
+  labels:
+    app: blue-green
+    version: green
+    owner: userX
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: blue-green
+      version: green
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: blue-green
+        version: green
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.22  # Newer version for green deployment
+        ports:
+        - containerPort: 80
+        env:
+        - name: VERSION
+          value: "green-v2.0"
+        - name: DEPLOYMENT_TYPE
+          value: "green"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10

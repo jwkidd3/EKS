@@ -18,6 +18,8 @@
 
 ## Instructions
 
+> **🔧 ADVANCED DEPLOYMENTS & TROUBLESHOOTING:** This lab tests multiple deployment patterns and troubleshooting scenarios. All resources use your username prefix to isolate testing environments and prevent interference with other students' blue-green and canary deployments.
+
 ### Step 1: Set Up Problematic Applications
 Deploy applications with intentional issues:
 

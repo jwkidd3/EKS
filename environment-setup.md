@@ -1,7 +1,13 @@
 # EKS Training Environment Setup Guide
 
 ## Overview
-This document outlines the components and steps required to set up a shared EKS cluster environment for the 3-day training course using eksctl for cluster creation and management.
+This document outlines the components and steps required to set up a **simplified shared EKS cluster** environment for the 3-day training course using eksctl for cluster creation and management.
+
+### Key Simplifications
+- **Single IAM Role:** All 30 students use one common `EKS-Training-Role`
+- **Cloud9 Integration:** Simple role assumption in Cloud9 environments
+- **No Individual User Management:** Eliminates complex per-user IAM setup
+- **Streamlined Access:** One-command cluster access configuration
 
 ## Prerequisites
 - AWS Account with appropriate permissions
@@ -50,7 +56,7 @@ kind: ClusterConfig
 
 metadata:
   name: training-cluster
-  region: us-west-2
+  region: us-east-2
   version: "1.28"
 
 # VPC Configuration
@@ -96,9 +102,9 @@ addons:
 nodeGroups:
 - name: training-workers
   instanceType: m5.large
-  desiredCapacity: 3
-  minSize: 2
-  maxSize: 6
+  desiredCapacity: 5
+  minSize: 3
+  maxSize: 10
   volumeSize: 30
   volumeType: gp3
   amiFamily: AmazonLinux2
@@ -124,9 +130,9 @@ nodeGroups:
   - m5a.large
   - m4.large
   spot: true
-  desiredCapacity: 2
+  desiredCapacity: 3
   minSize: 0
-  maxSize: 4
+  maxSize: 8
   volumeSize: 30
   volumeType: gp3
   amiFamily: AmazonLinux2
@@ -151,7 +157,7 @@ cloudWatch:
 ```bash
 # Set environment variables
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AWS_REGION=us-west-2
+export AWS_REGION=us-east-2
 
 # Substitute AWS account ID in the config file
 envsubst < eks-training-cluster.yaml > eks-training-cluster-final.yaml
@@ -167,7 +173,7 @@ kubectl cluster-info
 ### 2. Update kubeconfig
 ```bash
 # Update kubeconfig for cluster access
-aws eks update-kubeconfig --region us-west-2 --name training-cluster
+aws eks update-kubeconfig --region us-east-2 --name training-cluster
 
 # Verify access
 kubectl get svc
@@ -186,7 +192,7 @@ helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
   --set clusterName=training-cluster \
   --set serviceAccount.create=false \
   --set serviceAccount.name=aws-load-balancer-controller \
-  --set region=us-west-2 \
+  --set region=us-east-2 \
   --set vpcId=$(aws eks describe-cluster --name training-cluster --query "cluster.resourcesVpcConfig.vpcId" --output text)
 
 # Verify installation
@@ -290,6 +296,25 @@ volumeBindingMode: WaitForFirstConsumer
 reclaimPolicy: Delete
 EOF
 
+# Create immediate-binding gp3 storage class for instant PVC provisioning
+cat <<EOF | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: gp3-immediate
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "false"
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+allowVolumeExpansion: true
+volumeBindingMode: Immediate
+reclaimPolicy: Delete
+EOF
+
 # Verify storage classes
 kubectl get storageclass
 ```
@@ -328,29 +353,59 @@ rules:
 - apiGroups: ["metrics.k8s.io"]
   resources: ["*"]
   verbs: ["get", "list"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list", "use"]
+- apiGroups: [""]
+  resources: ["persistentvolumes"]
+  verbs: ["get", "list"]
 EOF
 ```
 
-### 2. Create IAM Users and Map to Kubernetes
+### 2. Create Common IAM Role for Cloud9 Access
 ```bash
-# Create IAM users (adjust number as needed)
-for i in {1..20}; do
-  aws iam create-user --user-name training-user$i
-  aws iam attach-user-policy --user-name training-user$i --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
-done
+# Create a common IAM role that all Cloud9 environments will assume
+cat <<EOF > eks-training-role-policy.json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ec2.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        },
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:root"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+EOF
 
-# Create IAM group and add users
-aws iam create-group --group-name eks-training-users
+# Create the role
+aws iam create-role \
+  --role-name EKS-Training-Role \
+  --assume-role-policy-document file://eks-training-role-policy.json
 
-for i in {1..20}; do
-  aws iam add-user-to-group --user-name training-user$i --group-name eks-training-users
-done
+# Attach necessary policies
+aws iam attach-role-policy \
+  --role-name EKS-Training-Role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
 
-# Map users to Kubernetes
+aws iam attach-role-policy \
+  --role-name EKS-Training-Role \
+  --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+
+# Map the role to Kubernetes
 eksctl create iamidentitymapping \
   --cluster training-cluster \
-  --region us-west-2 \
-  --arn arn:aws:iam::${AWS_ACCOUNT_ID}:group/eks-training-users \
+  --region us-east-2 \
+  --arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role \
   --group training-users \
   --username training-user
 
@@ -371,13 +426,32 @@ roleRef:
 EOF
 ```
 
+### 3. Verify Role Access
+```bash
+# Test that the role can access the cluster
+aws sts assume-role \
+  --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role \
+  --role-session-name test-session
+
+# Update kubeconfig with the new role
+aws eks update-kubeconfig \
+  --region us-east-2 \
+  --name training-cluster \
+  --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
+
+# Verify access
+kubectl auth can-i create namespace
+kubectl auth can-i create pods
+kubectl auth can-i get storageclasses
+```
+
 ## Monitoring and Observability
 
 ### 1. Enable CloudWatch Container Insights
 ```bash
 # Install CloudWatch agent
 curl https://raw.githubusercontent.com/aws-samples/amazon-cloudwatch-container-insights/latest/k8s-deployment-manifest-templates/deployment-mode/daemonset/container-insights-monitoring/quickstart/cwagent-fluentd-quickstart.yaml | \
-sed "s/{{cluster_name}}/training-cluster/;s/{{region_name}}/us-west-2/" | \
+sed "s/{{cluster_name}}/training-cluster/;s/{{region_name}}/us-east-2/" | \
 kubectl apply -f -
 
 # Verify CloudWatch agent
@@ -419,6 +493,44 @@ spec:
 EOF
 ```
 
+## Cloud9 Environment Setup for Students
+
+### Simple Role Assignment for Cloud9
+Each Cloud9 environment needs to assume the common training role:
+
+```bash
+# In each Cloud9 environment, configure AWS credentials to use the training role
+aws configure set role_arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
+aws configure set source_profile default
+
+# Or set environment variables
+export AWS_ROLE_ARN=arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
+export AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/secrets/eks.amazonaws.com/serviceaccount/token
+
+# Update kubeconfig in Cloud9
+aws eks update-kubeconfig --region us-east-2 --name training-cluster
+
+# Verify access
+kubectl get nodes
+kubectl auth can-i create pods
+```
+
+### Cloud9 Instance Profile Alternative
+Alternatively, attach the EKS-Training-Role directly to Cloud9 EC2 instances:
+
+```bash
+# Create instance profile
+aws iam create-instance-profile --instance-profile-name EKS-Training-Profile
+
+# Add role to instance profile
+aws iam add-role-to-instance-profile \
+  --instance-profile-name EKS-Training-Profile \
+  --role-name EKS-Training-Role
+
+# Attach to Cloud9 instances (do this for each Cloud9 environment)
+# This can be done through the EC2 console or AWS CLI
+```
+
 ## Validation and Testing
 
 ### 1. Cluster Validation
@@ -428,6 +540,27 @@ kubectl get nodes
 kubectl get pods --all-namespaces
 kubectl get storageclass
 kubectl get crd | grep calico
+
+# Test storage class functionality
+kubectl create namespace test-storage
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-pvc-immediate
+  namespace: test-storage
+spec:
+  storageClassName: gp3-immediate
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+EOF
+
+# Verify PVC is bound immediately
+kubectl get pvc -n test-storage
+kubectl delete namespace test-storage
 
 # Test cluster functionality
 kubectl run test-pod --image=nginx:1.21 --rm -it --restart=Never -- curl -I http://kubernetes.default.svc.cluster.local
@@ -455,13 +588,19 @@ kubectl get deployment -n kube-system cluster-autoscaler
 kubectl get svc -n kube-ops-view
 ```
 
-### 3. User Access Testing
+### 3. Role Access Testing
 ```bash
-# Test user permissions (run with training user credentials)
+# Test training role permissions (run from any Cloud9 environment)
 kubectl auth can-i create namespace
 kubectl auth can-i create pods
 kubectl auth can-i create networkpolicies
 kubectl auth can-i get nodes
+kubectl auth can-i get storageclasses
+kubectl auth can-i create persistentvolumeclaims
+
+# Test creating a sample namespace
+kubectl create namespace test-access
+kubectl delete namespace test-access
 ```
 
 ## Cleanup Scripts
@@ -493,7 +632,7 @@ echo "Training cleanup completed!"
 echo "Deleting EKS training cluster..."
 
 # Delete the cluster (this will also delete node groups and associated resources)
-eksctl delete cluster --name training-cluster --region us-west-2
+eksctl delete cluster --name training-cluster --region us-east-2
 
 # Clean up any remaining EBS volumes (optional)
 aws ec2 describe-volumes --filters "Name=tag:kubernetes.io/cluster/training-cluster,Values=owned" --query 'Volumes[*].VolumeId' --output text | xargs -r aws ec2 delete-volume --volume-id
@@ -512,14 +651,20 @@ echo "Cluster deletion completed!"
 
 ### Cost Monitoring
 ```bash
-# Check current node utilization
+# Check current node utilization for 30-user capacity
 kubectl top nodes
 
-# Check resource requests vs limits
+# Check resource requests vs limits across all nodes
 kubectl describe nodes | grep -A 5 "Allocated resources"
 
-# Monitor cluster autoscaler logs
+# Monitor cluster autoscaler logs for scaling events
 kubectl logs -n kube-system deployment/cluster-autoscaler
+
+# Check namespace resource usage
+kubectl get resourcequota --all-namespaces
+
+# Monitor EBS volume costs
+aws ec2 describe-volumes --filters "Name=tag:kubernetes.io/cluster/training-cluster,Values=owned" --query 'Volumes[*].[VolumeId,Size,VolumeType]' --output table
 ```
 
 ## Troubleshooting
@@ -534,10 +679,10 @@ kubectl logs -n kube-system deployment/cluster-autoscaler
 ### Monitoring Commands
 ```bash
 # Monitor cluster status
-eksctl get cluster --region us-west-2
+eksctl get cluster --region us-east-2
 
 # Check node group status
-eksctl get nodegroup --cluster training-cluster --region us-west-2
+eksctl get nodegroup --cluster training-cluster --region us-east-2
 
 # Monitor cluster events
 kubectl get events --sort-by=.metadata.creationTimestamp
@@ -569,6 +714,42 @@ kubectl top pods -A
 - Access key rotation
 - VPC Flow Logs (optional)
 
+## Capacity Planning for 30 Students
+
+### Node Group Scaling
+- **Primary Workers:** 5-10 nodes (m5.large) - handles core workloads
+- **Spot Workers:** 0-8 nodes (mixed instance types) - cost optimization
+- **Total Capacity:** 13-18 nodes supporting 30 concurrent users
+- **Auto Scaling:** Enabled based on resource demands
+
+### Resource Allocation per Student
+- **CPU Requests:** Up to 4 cores per namespace
+- **Memory Requests:** Up to 8GB per namespace
+- **Pods:** Up to 20 pods per namespace
+- **Storage:** Up to 5 PVCs per namespace
+- **Services:** Up to 10 services per namespace
+
+### Total Cluster Capacity
+- **CPU:** ~60-90 cores across all nodes
+- **Memory:** ~240-360GB across all nodes
+- **Storage:** Unlimited EBS volumes (pay per use)
+- **Network:** 30 isolated namespaces with Calico policies
+
+## Storage Classes Summary
+
+The cluster provides multiple storage classes for different lab scenarios:
+
+| Storage Class | Binding Mode | Use Case | IOPS | Throughput |
+|---------------|--------------|----------|------|------------|
+| **gp3** | WaitForFirstConsumer | StatefulSets, node-specific workloads | 3000 | 125 MiB/s |
+| **gp3-immediate** | Immediate | Quick PVC provisioning, demos | 3000 | 125 MiB/s |
+| **fast-ssd** | WaitForFirstConsumer | High-performance applications | 4000 | N/A |
+
+**Storage Access:**
+- All students have immediate access to create PVCs with any storage class
+- RBAC permissions configured for `get`, `list`, and `use` on storage classes
+- Automatic cleanup of PVCs when namespaces are deleted
+
 ---
 
-**Note**: This environment setup using eksctl provides a production-ready, secure, and cost-effective EKS cluster for training purposes. All components are configured with best practices and can support 20+ concurrent users for hands-on labs.
+**Note**: This simplified environment setup using eksctl provides a production-ready, secure, and cost-effective EKS cluster for training purposes. All components are configured with best practices and can support **30 concurrent users** via a single common IAM role, making Cloud9 environment setup extremely simple.

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-broken-config
+  namespace: userX-namespace
+  labels:
+    app: broken-config
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: broken-config
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: broken-config
+        owner: userX
+    spec:
+      containers:
+      - name: broken-app
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          echo "Starting application..."
+          # This will fail - missing environment variable
+          echo "Database URL: $DATABASE_URL"
+          # This will also fail - invalid configuration
+          cat /config/missing-file.conf
+          sleep 300
+        env:
+        - name: APP_ENV
+          value: "production"
+        # Missing DATABASE_URL environment variable
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      volumes:
+      - name: config-volume
+        configMap:
+          name: userX-broken-config  # This ConfigMap doesn't exist

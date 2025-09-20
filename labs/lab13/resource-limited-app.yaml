@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-resource-limited
+  namespace: userX-namespace
+  labels:
+    app: resource-limited
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: resource-limited
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: resource-limited
+        owner: userX
+    spec:
+      containers:
+      - name: limited-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: RESOURCE_MODE
+          value: "limited"
+        resources:
+          requests:
+            memory: "32Mi"   # Very low resource requests
+            cpu: "25m"
+          limits:
+            memory: "64Mi"   # Tight resource limits
+            cpu: "50m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: userX-resource-limited-pdb
+  namespace: userX-namespace
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: resource-limited
+      owner: userX

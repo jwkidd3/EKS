@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: userX-strict-quota
+  namespace: userX-namespace
+spec:
+  hard:
+    requests.cpu: "2"        # Strict CPU request limit
+    requests.memory: 4Gi     # Strict memory request limit
+    limits.cpu: "4"          # Strict CPU limit
+    limits.memory: 8Gi       # Strict memory limit
+    pods: "10"               # Maximum 10 pods
+    services: "5"            # Maximum 5 services
+    persistentvolumeclaims: "2"  # Maximum 2 PVCs
+    count/deployments.apps: "5"  # Maximum 5 deployments
+    count/replicasets.apps: "10" # Maximum 10 replicasets
+    count/secrets: "5"       # Maximum 5 secrets
+    count/configmaps: "5"    # Maximum 5 configmaps
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: userX-strict-limits
+  namespace: userX-namespace
+spec:
+  limits:
+  - default:        # Default limits
+      cpu: "200m"
+      memory: "256Mi"
+    defaultRequest: # Default requests
+      cpu: "50m"
+      memory: "64Mi"
+    max:           # Maximum allowed
+      cpu: "500m"
+      memory: "512Mi"
+    min:           # Minimum required
+      cpu: "10m"
+      memory: "16Mi"
+    type: Container
+  - max:           # Pod-level limits
+      cpu: "1"
+      memory: "1Gi"
+    type: Pod
