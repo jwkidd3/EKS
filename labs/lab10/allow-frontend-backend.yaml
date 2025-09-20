@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: userX-allow-frontend-backend
+  namespace: userX-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+      owner: userX
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+          owner: userX
+    ports:
+    - protocol: TCP
+      port: 8080

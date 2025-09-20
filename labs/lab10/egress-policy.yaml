@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: userX-egress-policy
+  namespace: userX-namespace
+spec:
+  podSelector:
+    matchLabels:
+      app: frontend
+      owner: userX
+  policyTypes:
+  - Egress
+  egress:
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53
+  # Allow internal service communication
+  - to:
+    - podSelector:
+        matchLabels:
+          owner: userX
+  # Block external internet access
+  # (no other egress rules = deny external)

@@ -14,6 +14,8 @@
 
 ## Instructions
 
+> **🌐 SERVICE NETWORKING:** This lab creates various service types that expose your applications. Each service name is customized with your username to avoid port conflicts and ensure proper load balancer isolation in the shared cluster.
+
 ### Step 1: Prepare Your Environment
 First, ensure you have some pods running to expose:
 

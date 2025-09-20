@@ -120,11 +120,20 @@ kubectl describe namespace kube-system
 - What custom namespaces are already created?
 
 ### Step 6: Create Your Personal Namespace
-Create your personal namespace using the provided YAML file. Edit the namespace name to include your username:
+Create your personal namespace using the provided YAML file. You'll need to customize it with your assigned username for resource isolation in the shared cluster:
 
 ```bash
-# Edit the namespace YAML file
-# Replace 'userX' with your actual username (e.g., user1, user2)
+# IMPORTANT: Resource Naming for Shared Cluster
+# The sed command below replaces 'userX' with your assigned username in ALL resource names
+# This ensures isolation between students in the shared EKS cluster
+#
+# What gets renamed:
+# - Namespace: userX-namespace → user1-namespace
+# - ResourceQuota: userX-quota → user1-quota
+# - LimitRange: userX-limits → user1-limits
+# - Labels: owner: userX → owner: user1
+#
+# Replace 'user1' with YOUR assigned username (user1, user2, user3, etc.)
 sed 's/userX/user1/g' namespace.yaml > my-namespace.yaml
 
 # Create your namespace

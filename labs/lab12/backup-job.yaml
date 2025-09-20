@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-postgres-backup
+  namespace: userX-namespace
+  labels:
+    app: postgres-backup
+    owner: userX
+spec:
+  template:
+    metadata:
+      labels:
+        app: postgres-backup
+        owner: userX
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: postgres-backup
+        image: postgres:13
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Starting backup of PostgreSQL database..."
+          pg_dump -h userX-postgres-service -U postgres testdb > /backup/backup-$(date +%Y%m%d-%H%M%S).sql
+          echo "Backup completed successfully"
+        env:
+        - name: PGPASSWORD
+          value: "password"
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backup
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      volumes:
+      - name: backup-storage
+        emptyDir: {}

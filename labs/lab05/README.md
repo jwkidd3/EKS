@@ -15,6 +15,8 @@
 
 ## Instructions
 
+> **📋 MICROSERVICES NAMING CONVENTION:** This lab deploys multiple interconnected services. Each `sed` command customizes service names, deployments, and network connectivity with your username prefix to ensure proper isolation and avoid conflicts with other students in the shared cluster.
+
 ### Step 1: Clean Up Previous Resources
 Start with a clean environment:
 
@@ -32,7 +34,11 @@ kubectl get pods
 Start by deploying a Redis database for the microservices:
 
 ```bash
-# Deploy Redis database
+# Deploy Redis database with user-specific naming
+# These commands customize ALL resource names with your username:
+# - Deployment: userX-redis → user1-redis
+# - Service: userX-redis-service → user1-redis-service
+# - Labels: owner: userX → owner: user1
 sed 's/userX/user1/g' redis-deployment.yaml > my-redis-deployment.yaml
 sed 's/userX/user1/g' redis-service.yaml > my-redis-service.yaml
 

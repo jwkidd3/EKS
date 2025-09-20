@@ -16,6 +16,8 @@
 
 ## Instructions
 
+> **🔒 NETWORK POLICY ISOLATION:** This lab creates network policies that control traffic between your applications. All policies and resources are scoped to your namespace using your username prefix, ensuring network rules don't interfere with other students.
+
 ### Step 1: Clean Up Previous Resources
 ```bash
 kubectl delete deployment --all
@@ -28,6 +30,14 @@ kubectl get all
 Deploy multiple applications to test network connectivity:
 
 ```bash
+# NETWORK POLICY TESTING: Deploy 3-tier application architecture
+# Each sed command customizes deployments, services, and network policies:
+# - Frontend: userX-frontend → user1-frontend
+# - Backend: userX-backend → user1-backend
+# - Database: userX-database → user1-database
+# - All services: userX-*-service → user1-*-service
+# - Network policies will reference these specific names
+
 # Deploy frontend application
 sed 's/userX/user1/g' frontend-app.yaml > my-frontend-app.yaml
 kubectl apply -f my-frontend-app.yaml

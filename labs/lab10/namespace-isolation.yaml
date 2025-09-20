@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: userX-namespace-isolation
+  namespace: userX-namespace
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: userX-namespace
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: userX-namespace
+  # Allow DNS
+  - to: []
+    ports:
+    - protocol: UDP
+      port: 53

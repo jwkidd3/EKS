@@ -14,6 +14,8 @@
 
 ## Instructions
 
+> **📋 SHARED CLUSTER NOTICE:** Throughout this lab, you'll use `sed` commands to replace `userX` with your assigned username (user1, user2, etc.) in YAML files. This ensures your resources are properly named and isolated from other students in the shared EKS cluster.
+
 ### Step 1: Verify Your Environment
 Before starting, ensure you're in the correct namespace:
 
@@ -29,10 +31,18 @@ kubectl auth can-i create pods
 ```
 
 ### Step 2: Create Your First Pod
-Let's start with a simple nginx Pod:
+Let's start with a simple nginx Pod customized for your user:
 
 ```bash
-# Edit the simple pod YAML to include your username
+# SHARED CLUSTER: Customize Pod with Your Username
+# This command replaces 'userX' with your assigned username in the YAML file
+#
+# What gets renamed:
+# - Pod name: userX-simple-nginx → user1-simple-nginx
+# - Namespace: userX-namespace → user1-namespace
+# - Labels: owner: userX → owner: user1
+#
+# Replace 'user1' with YOUR assigned username (user1, user2, user3, etc.)
 sed 's/userX/user1/g' simple-pod.yaml > my-simple-pod.yaml
 
 # Create the pod

@@ -15,6 +15,8 @@
 
 ## Instructions
 
+> **💾 STATEFUL STORAGE ISOLATION:** This lab creates StatefulSets with persistent storage. Each student gets isolated storage classes, PVCs, and StatefulSets using username prefixes to prevent data mixing and ensure proper cleanup of AWS EBS volumes.
+
 ### Step 1: Clean Up Previous Resources
 ```bash
 kubectl delete deployment --all
@@ -23,9 +25,20 @@ kubectl get all
 ```
 
 ### Step 2: Create Storage Class and PV Claims
-Set up persistent storage:
+Set up persistent storage with user isolation:
 
 ```bash
+# CRITICAL FOR SHARED CLUSTER: Customize storage resources
+# Each student gets their own storage class and PVCs to prevent:
+# - Accidental data access between students
+# - Storage conflicts and cleanup issues
+# - AWS EBS volume naming collisions
+#
+# What gets renamed:
+# - StorageClass: userX-fast-ssd → user1-fast-ssd
+# - PVCs: userX-data-pvc → user1-data-pvc
+# - StatefulSet volumes will reference these custom names
+
 # Create storage class
 sed 's/userX/user1/g' storage-class.yaml > my-storage-class.yaml
 kubectl apply -f my-storage-class.yaml
