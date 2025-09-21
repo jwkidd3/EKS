@@ -3,7 +3,7 @@
 ## Duration: 30 minutes
 
 ## Objectives
-- Install and configure kubectl for cluster access
+- Configure kubectl for cluster access (kubectl pre-installed in Cloud9)
 - Connect to shared EKS cluster in us-east-2
 - Explore existing cluster components and namespaces
 - Create personal namespace for isolation (userX-namespace)
@@ -15,36 +15,12 @@
 
 ## Instructions
 
-### Step 1: Install Required Tools
+### Step 1: Verify Pre-installed Tools
 
-#### Install kubectl
-**For macOS:**
+#### Verify kubectl (pre-installed in Cloud9)
 ```bash
-# Using Homebrew
-brew install kubectl
-
-# Verify installation
+# Verify kubectl is available
 kubectl version --client
-```
-
-**For Linux:**
-```bash
-# Download kubectl
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-
-# Install kubectl
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-# Verify installation
-kubectl version --client
-```
-
-**For Windows:**
-```powershell
-# Using Chocolatey
-choco install kubernetes-cli
-
-# Or download from https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/
 ```
 
 #### Verify AWS CLI (pre-installed in Cloud9)

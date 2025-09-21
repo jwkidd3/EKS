@@ -1,0 +1,21 @@
+# test-storage.yaml
+# Basic test to confirm immediate storage creation works
+# This PVC should bind immediately due to gp3-immediate storage class
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: test-storage-pvc
+  namespace: default
+  labels:
+    app: storage-test
+    purpose: validation
+  annotations:
+    description: "Test PVC to validate immediate storage binding"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: gp3-immediate
+  resources:
+    requests:
+      storage: 1Gi

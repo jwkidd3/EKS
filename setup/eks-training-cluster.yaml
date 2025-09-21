@@ -1,0 +1,48 @@
+# eks-training-cluster-simple.yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: training-cluster
+  region: us-east-2
+  version: "1.28"
+
+# VPC Configuration
+vpc:
+  cidr: 10.0.0.0/16
+
+# IAM Configuration
+iam:
+  withOIDC: true
+
+# Add-ons
+addons:
+- name: vpc-cni
+- name: coredns
+- name: kube-proxy
+- name: aws-ebs-csi-driver
+
+# Node Groups
+nodeGroups:
+- name: training-workers
+  instanceType: m5.large
+  desiredCapacity: 2
+  minSize: 2
+  maxSize: 2
+  volumeSize: 30
+  volumeType: gp3
+  amiFamily: AmazonLinux2
+  ssh:
+    enableSsm: true
+  labels:
+    node-type: training
+    environment: education
+  tags:
+    Environment: Training
+    Project: EKS-Course
+
+# CloudWatch Logging
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+    logRetentionInDays: 7

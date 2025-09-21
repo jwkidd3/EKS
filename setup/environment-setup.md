@@ -32,18 +32,8 @@ sudo mv /tmp/eksctl /usr/local/bin
 eksctl version
 ```
 
-### Install kubectl
-```bash
-# For macOS
-brew install kubectl
-
-# For Linux
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-
-# Verify installation
-kubectl version --client
-```
+### kubectl Pre-installed in Cloud9
+kubectl is pre-installed in AWS Cloud9 environments, so no additional installation is required for students.
 
 ## Cluster Configuration File
 
@@ -125,11 +115,14 @@ nodeGroups:
 
 # Optional: Spot instance node group for cost optimization
 - name: training-spot
-  instanceTypes:
-  - m5.large
-  - m5a.large
-  - m4.large
-  spot: true
+  instancesDistribution:
+    instanceTypes:
+    - m5.large
+    - m5a.large
+    - m4.large
+    onDemandBaseCapacity: 0
+    onDemandPercentageAboveBaseCapacity: 0
+    spotInstancePools: 3
   desiredCapacity: 3
   minSize: 0
   maxSize: 8
@@ -159,11 +152,8 @@ cloudWatch:
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 export AWS_REGION=us-east-2
 
-# Substitute AWS account ID in the config file
-envsubst < eks-training-cluster.yaml > eks-training-cluster-final.yaml
-
 # Create the cluster (takes 15-20 minutes)
-eksctl create cluster -f eks-training-cluster-final.yaml
+eksctl create cluster -f eks-training-cluster.yaml
 
 # Verify cluster creation
 kubectl get nodes
