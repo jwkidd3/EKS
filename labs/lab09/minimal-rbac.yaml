@@ -1,0 +1,35 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: userX-namespace
+  name: userX-minimal-role
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: userX-minimal-binding
+  namespace: userX-namespace
+subjects:
+- kind: ServiceAccount
+  name: userX-minimal-sa
+  namespace: userX-namespace
+roleRef:
+  kind: Role
+  name: userX-minimal-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: userX-minimal-sa
+  namespace: userX-namespace
+  labels:
+    purpose: minimal-access
+    owner: userX

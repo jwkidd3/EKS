@@ -1,0 +1,191 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: userX-redis-cluster
+  namespace: userX-namespace
+  labels:
+    app: redis-cluster
+    owner: userX
+spec:
+  serviceName: userX-redis-cluster-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: redis-cluster
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: redis-cluster
+        owner: userX
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+          name: redis
+        - containerPort: 16379
+          name: cluster
+        command:
+        - redis-server
+        - /etc/redis/redis.conf
+        - --cluster-enabled
+        - "yes"
+        - --cluster-config-file
+        - /data/nodes.conf
+        - --cluster-node-timeout
+        - "5000"
+        - --appendonly
+        - "yes"
+        - --protected-mode
+        - "no"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: USER_PREFIX
+          value: "userX"
+        - name: REDIS_CLUSTER_ANNOUNCE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        - name: redis-config
+          mountPath: /etc/redis
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "redis-cli ping"
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "redis-cli ping"
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: redis-config
+        configMap:
+          name: userX-redis-config
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-data
+      labels:
+        app: redis-cluster
+        owner: userX
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: userX-redis-config
+  namespace: userX-namespace
+  labels:
+    app: redis-cluster
+    owner: userX
+data:
+  redis.conf: |
+    # Redis configuration for cluster mode
+    port 6379
+    cluster-enabled yes
+    cluster-config-file nodes.conf
+    cluster-node-timeout 5000
+    appendonly yes
+    appendfsync everysec
+    save 900 1
+    save 300 10
+    save 60 10000
+
+    # Logging
+    loglevel notice
+    logfile ""
+
+    # Memory settings
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+
+    # Network settings
+    bind 0.0.0.0
+    protected-mode no
+    tcp-keepalive 60
+
+    # Cluster settings
+    cluster-require-full-coverage no
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-redis-cluster-init
+  namespace: userX-namespace
+  labels:
+    app: redis-cluster-init
+    owner: userX
+spec:
+  template:
+    metadata:
+      labels:
+        app: redis-cluster-init
+        owner: userX
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: cluster-init
+        image: redis:7-alpine
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Initializing Redis cluster for userX..."
+
+          # Wait for all Redis instances to be ready
+          echo "Waiting for Redis instances..."
+          for i in 0 1 2; do
+            until redis-cli -h userX-redis-cluster-$i.userX-redis-cluster-service ping; do
+              echo "Waiting for userX-redis-cluster-$i..."
+              sleep 2
+            done
+          done
+
+          echo "All Redis instances are ready. Creating cluster..."
+
+          # Create the Redis cluster
+          redis-cli --cluster create \
+            userX-redis-cluster-0.userX-redis-cluster-service:6379 \
+            userX-redis-cluster-1.userX-redis-cluster-service:6379 \
+            userX-redis-cluster-2.userX-redis-cluster-service:6379 \
+            --cluster-replicas 0 \
+            --cluster-yes
+
+          echo "Redis cluster initialization completed!"
+
+          # Test the cluster
+          echo "Testing cluster..."
+          redis-cli -h userX-redis-cluster-0.userX-redis-cluster-service cluster info
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"

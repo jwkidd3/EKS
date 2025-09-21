@@ -4,7 +4,7 @@
 
 ## Objectives
 - Install and configure kubectl for cluster access
-- Connect to shared EKS cluster in us-east-1
+- Connect to shared EKS cluster in us-east-2
 - Explore existing cluster components and namespaces
 - Create personal namespace for isolation (userX-namespace)
 - Verify cluster access and basic kubectl commands
@@ -74,7 +74,7 @@ Update your kubeconfig to connect to the training cluster:
 
 ```bash
 # Update kubeconfig for the training cluster
-aws eks update-kubeconfig --region us-east-1 --name training-cluster
+aws eks update-kubeconfig --region us-east-2 --name training-cluster
 
 # Verify the context was added
 kubectl config get-contexts
@@ -263,10 +263,10 @@ kubectl config view --minify | grep name
 kubectl cluster-info dump
 
 # Re-configure cluster access if needed
-aws eks update-kubeconfig --region us-east-1 --name training-cluster
+aws eks update-kubeconfig --region us-east-2 --name training-cluster
 
 # View available clusters (read-only)
-aws eks list-clusters --region us-east-1
+aws eks list-clusters --region us-east-2
 ```
 
 ## Key Takeaways

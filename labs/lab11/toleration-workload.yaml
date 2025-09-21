@@ -1,0 +1,198 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-toleration-workload
+  namespace: userX-namespace
+  labels:
+    app: toleration-workload
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: toleration-workload
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: toleration-workload
+        owner: userX
+    spec:
+      tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "training"
+        effect: "NoSchedule"
+      - key: "environment"
+        operator: "Equal"
+        value: "education"
+        effect: "NoExecute"
+        tolerationSeconds: 3600
+      - key: "spot-instance"
+        operator: "Exists"
+        effect: "PreferNoSchedule"
+      containers:
+      - name: toleration-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: TOLERATION_TYPE
+          value: "multiple-tolerations"
+        - name: USER_PREFIX
+          value: "userX"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        volumeMounts:
+        - name: toleration-config
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+      volumes:
+      - name: toleration-config
+        configMap:
+          name: userX-toleration-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: userX-toleration-config
+  namespace: userX-namespace
+  labels:
+    app: toleration-workload
+    owner: userX
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Toleration Workload - userX</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f4f4f4; }
+            .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+            .header { background: #3498db; color: white; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+            .info { background: #ecf0f1; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            .highlight { background: #f39c12; color: white; padding: 10px; border-radius: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Toleration Workload Application</h1>
+                <p>Running with multiple node tolerations</p>
+            </div>
+
+            <div class="info">
+                <h3>Pod Information</h3>
+                <p><strong>User Prefix:</strong> userX</p>
+                <p><strong>Application:</strong> Toleration Workload Demo</p>
+                <p><strong>Status:</strong> Running with Tolerations</p>
+            </div>
+
+            <div class="highlight">
+                <h3>Active Tolerations</h3>
+                <ul>
+                    <li>dedicated=training:NoSchedule</li>
+                    <li>environment=education:NoExecute (3600s)</li>
+                    <li>spot-instance:PreferNoSchedule</li>
+                </ul>
+            </div>
+
+            <div class="info">
+                <h3>Node Placement</h3>
+                <p>This pod can be scheduled on nodes with taints that match our tolerations.</p>
+                <p>Check the pod's actual node placement using: <code>kubectl get pods -o wide</code></p>
+            </div>
+        </div>
+    </body>
+    </html>
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-toleration-service
+  namespace: userX-namespace
+  labels:
+    app: toleration-workload
+    owner: userX
+spec:
+  selector:
+    app: toleration-workload
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-toleration-test-job
+  namespace: userX-namespace
+  labels:
+    app: toleration-test
+    owner: userX
+spec:
+  template:
+    metadata:
+      labels:
+        app: toleration-test
+        owner: userX
+    spec:
+      tolerations:
+      - key: "batch-job"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      - key: "short-lived"
+        operator: "Exists"
+        effect: "PreferNoSchedule"
+      restartPolicy: Never
+      containers:
+      - name: toleration-test
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Starting toleration test job for userX..."
+          echo "Node: $(uname -n)"
+          echo "Testing tolerance to taints..."
+
+          # Simulate some work
+          for i in $(seq 1 30); do
+            echo "Test iteration $i/30"
+            sleep 2
+          done
+
+          echo "Toleration test completed successfully!"
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"

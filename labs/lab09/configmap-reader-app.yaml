@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-configmap-reader
+  namespace: userX-namespace
+  labels:
+    app: configmap-reader
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configmap-reader
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: configmap-reader
+        owner: userX
+    spec:
+      serviceAccountName: userX-configmap-manager-sa
+      containers:
+      - name: configmap-reader
+        image: bitnami/kubectl:latest
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Starting ConfigMap reader application..."
+          echo "Testing ConfigMap access permissions..."
+
+          # Test reading configmaps
+          kubectl get configmaps || echo "Cannot read configmaps"
+
+          # Test creating a configmap
+          kubectl create configmap userX-test-config --from-literal=test=value || echo "Cannot create configmaps"
+
+          # Keep container running
+          sleep 3600
+        env:
+        - name: APP_ROLE
+          value: "configmap-reader"
+        - name: USER_PREFIX
+          value: "userX"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: userX-app-config
+  namespace: userX-namespace
+  labels:
+    owner: userX
+data:
+  app.properties: |
+    app.name=configmap-reader
+    app.version=1.0
+    log.level=INFO
+  database.properties: |
+    db.host=localhost
+    db.port=5432
+    db.name=testdb

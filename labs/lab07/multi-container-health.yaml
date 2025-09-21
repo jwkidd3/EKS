@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-multi-container-health
+  namespace: userX-namespace
+  labels:
+    app: multi-container-health
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: multi-container-health
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: multi-container-health
+        owner: userX
+    spec:
+      containers:
+      - name: web-server
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+      - name: health-checker
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          while true; do
+            echo "$(date): Health check from sidecar container"
+            wget -q -O- http://localhost/ > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+              echo "$(date): Main container is healthy"
+            else
+              echo "$(date): Main container health check failed"
+            fi
+            sleep 30
+          done
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "ps aux | grep -v grep | grep 'sleep 30' > /dev/null"
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "ps aux | grep -v grep | grep 'sleep 30' > /dev/null"
+          initialDelaySeconds: 20
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+      - name: metrics-exporter
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          # Simple metrics exporter simulation
+          while true; do
+            echo "$(date): Exporting metrics..."
+            echo "cpu_usage: $(cat /proc/loadavg | cut -d' ' -f1)"
+            echo "memory_usage: $(free | grep Mem | awk '{print ($3/$2)*100}')"
+            sleep 60
+          done
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo 'metrics ready'"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo 'metrics alive'"
+          initialDelaySeconds: 10
+          periodSeconds: 20
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "25m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-multi-container-service
+  namespace: userX-namespace
+  labels:
+    app: multi-container-health
+    owner: userX
+spec:
+  selector:
+    app: multi-container-health
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+    name: web
+  type: ClusterIP

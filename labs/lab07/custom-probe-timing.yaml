@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-custom-probe-timing
+  namespace: userX-namespace
+  labels:
+    app: custom-probe-timing
+    owner: userX
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: custom-probe-timing
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: custom-probe-timing
+        owner: userX
+    spec:
+      containers:
+      - name: slow-startup-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: STARTUP_DELAY
+          value: "30"
+        command: ["/bin/sh"]
+        args:
+        - -c
+        - |
+          echo "Application starting with ${STARTUP_DELAY}s delay..."
+          sleep ${STARTUP_DELAY}
+          echo "Application ready!"
+          nginx -g 'daemon off;'
+        # Startup probe for slow-starting applications
+        startupProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 12  # Allows 60 seconds for startup (12 * 5s)
+          successThreshold: 1
+        # Readiness probe - more frequent checks
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 0  # No delay after startup probe succeeds
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 2
+          successThreshold: 1
+        # Liveness probe - less frequent to avoid unnecessary restarts
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 0  # No delay after startup probe succeeds
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-aggressive-probes
+  namespace: userX-namespace
+  labels:
+    app: aggressive-probes
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: aggressive-probes
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: aggressive-probes
+        owner: userX
+    spec:
+      containers:
+      - name: fast-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        # Very aggressive probe timing for demonstration
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 1
+          periodSeconds: 2  # Very frequent
+          timeoutSeconds: 1
+          failureThreshold: 1  # Fail fast
+          successThreshold: 1
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5  # Frequent checks
+          timeoutSeconds: 2
+          failureThreshold: 2
+          successThreshold: 1
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-probe-timing-service
+  namespace: userX-namespace
+  labels:
+    app: probe-timing
+    owner: userX
+spec:
+  selector:
+    app: custom-probe-timing
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

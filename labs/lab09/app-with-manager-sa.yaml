@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-manager-app
+  namespace: userX-namespace
+  labels:
+    app: manager-app
+    owner: userX
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: manager-app
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: manager-app
+        owner: userX
+    spec:
+      serviceAccountName: userX-manager
+      containers:
+      - name: manager-app
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: ROLE
+          value: "manager"
+        - name: USER_PREFIX
+          value: "userX"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 15
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-manager-service
+  namespace: userX-namespace
+  labels:
+    app: manager-app
+    owner: userX
+spec:
+  selector:
+    app: manager-app
+    owner: userX
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

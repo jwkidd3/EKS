@@ -1,0 +1,255 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-high-cpu-app
+  namespace: userX-namespace
+  labels:
+    app: high-cpu-app
+    owner: userX
+    workload-type: cpu-intensive
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: high-cpu-app
+      owner: userX
+  template:
+    metadata:
+      labels:
+        app: high-cpu-app
+        owner: userX
+        workload-type: cpu-intensive
+    spec:
+      nodeSelector:
+        node-type: training
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: node.kubernetes.io/instance-type
+                operator: In
+                values:
+                - m5.large
+                - m5a.large
+                - m4.large
+          - weight: 80
+            preference:
+              matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: workload-type
+                  operator: In
+                  values:
+                  - cpu-intensive
+              topologyKey: kubernetes.io/hostname
+          - weight: 50
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - high-cpu-app
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: cpu-app
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Starting high-CPU application for userX..."
+          echo "CPU cores available: $(nproc)"
+
+          # Function to create CPU load
+          cpu_load() {
+            local duration=$1
+            local intensity=$2
+            echo "Creating CPU load for ${duration}s at ${intensity}% intensity..."
+
+            # Create background CPU-intensive processes
+            for i in $(seq 1 $intensity); do
+              (
+                while [ $i -le $intensity ]; do
+                  echo "scale=5000; 4*a(1)" | bc -l > /dev/null 2>&1
+                done
+              ) &
+            done
+
+            # Wait for the specified duration
+            sleep $duration
+
+            # Kill background processes
+            jobs -p | xargs kill 2>/dev/null || true
+            wait 2>/dev/null || true
+          }
+
+          # Progressive CPU load test
+          echo "Starting CPU stress patterns..."
+
+          while true; do
+            echo "$(date): Light CPU load (25%)"
+            cpu_load 30 1
+
+            echo "$(date): Medium CPU load (50%)"
+            cpu_load 30 2
+
+            echo "$(date): Heavy CPU load (75%)"
+            cpu_load 30 3
+
+            echo "$(date): Resting..."
+            sleep 60
+          done
+        env:
+        - name: USER_PREFIX
+          value: "userX"
+        - name: WORKLOAD_TYPE
+          value: "cpu-intensive"
+        - name: CPU_TARGET
+          value: "500m"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "200m"     # Request 200m CPU
+          limits:
+            memory: "256Mi"
+            cpu: "800m"     # Allow burst up to 800m CPU
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "ps aux | grep -v grep | grep 'sleep 60' > /dev/null"
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo 'alive'"
+          initialDelaySeconds: 30
+          periodSeconds: 60
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-high-cpu-service
+  namespace: userX-namespace
+  labels:
+    app: high-cpu-app
+    owner: userX
+spec:
+  selector:
+    app: high-cpu-app
+    owner: userX
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: metrics
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-cpu-benchmark-job
+  namespace: userX-namespace
+  labels:
+    app: cpu-benchmark
+    owner: userX
+spec:
+  parallelism: 2
+  completions: 2
+  template:
+    metadata:
+      labels:
+        app: cpu-benchmark
+        owner: userX
+        workload-type: cpu-test
+    spec:
+      nodeSelector:
+        node-type: training
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: workload-type
+                  operator: In
+                  values:
+                  - cpu-intensive
+                  - cpu-test
+              topologyKey: kubernetes.io/hostname
+      restartPolicy: Never
+      containers:
+      - name: cpu-benchmark
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Starting CPU benchmark for userX..."
+          echo "Node: $(hostname)"
+          echo "CPU cores: $(nproc)"
+
+          # CPU benchmark using mathematical calculations
+          benchmark_duration=120  # 2 minutes
+          start_time=$(date +%s)
+
+          echo "Running CPU benchmark for ${benchmark_duration} seconds..."
+
+          # Pi calculation benchmark
+          echo "scale=1000; 4*a(1)" | bc -l > /dev/null &
+          CALC_PID=$!
+
+          # Prime number calculation
+          (
+            n=2
+            count=0
+            while [ $count -lt 1000 ]; do
+              is_prime=1
+              i=2
+              while [ $((i * i)) -le $n ]; do
+                if [ $((n % i)) -eq 0 ]; then
+                  is_prime=0
+                  break
+                fi
+                i=$((i + 1))
+              done
+              if [ $is_prime -eq 1 ]; then
+                count=$((count + 1))
+              fi
+              n=$((n + 1))
+            done
+          ) &
+          PRIME_PID=$!
+
+          # Wait for benchmark duration
+          sleep $benchmark_duration
+
+          # Clean up
+          kill $CALC_PID $PRIME_PID 2>/dev/null || true
+          wait 2>/dev/null || true
+
+          end_time=$(date +%s)
+          duration=$((end_time - start_time))
+
+          echo "CPU benchmark completed in ${duration} seconds"
+          echo "Performance test for userX finished"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
