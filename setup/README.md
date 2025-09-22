@@ -7,11 +7,12 @@ This directory contains all the configuration files and setup scripts needed to 
 ### Configuration Files
 - **`eks-training-cluster.yaml`** - EKS cluster configuration
 - **`storage-classes.yaml`** - Storage class definitions (gp3, fast-ssd, gp3-immediate)
-- **`anonymous-rbac.yaml`** - Anonymous access RBAC configuration
 - **`namespace-quota-template.yaml`** - Resource quota and limit templates
 - **`test-storage.yaml`** - Storage validation test
 
 ### Setup Scripts
+- **`add-user-access.sh`** - Add current AWS user to cluster access
+- **`update-cluster.sh`** - Update existing cluster configuration
 - **`cleanup-training.sh`** - Clean up training resources between sessions
 - **`delete-cluster.sh`** - Complete cluster deletion script
 - **`test-storage-cleanup.sh`** - Clean up storage test resources
@@ -21,10 +22,18 @@ This directory contains all the configuration files and setup scripts needed to 
 
 ## Quick Start
 
+### For New Cluster:
 1. **Create the cluster:**
    ```bash
    cd setup
    eksctl create cluster -f eks-training-cluster.yaml
+   ```
+
+### For Existing Cluster:
+1. **Add user access:**
+   ```bash
+   cd setup
+   ./add-user-access.sh
    ```
 
 2. **Apply storage classes:**
@@ -32,12 +41,7 @@ This directory contains all the configuration files and setup scripts needed to 
    kubectl apply -f storage-classes.yaml
    ```
 
-3. **Enable anonymous access:**
-   ```bash
-   kubectl apply -f anonymous-rbac.yaml
-   ```
-
-4. **Test immediate storage creation (optional):**
+3. **Test immediate storage creation (optional):**
    ```bash
    # Create PVC with immediate binding
    kubectl apply -f test-storage.yaml
@@ -52,7 +56,7 @@ This directory contains all the configuration files and setup scripts needed to 
    ./test-storage-cleanup.sh
    ```
 
-5. **Follow the complete setup guide in `environment-setup.md`**
+4. **Follow the complete setup guide in `environment-setup.md`**
 
 ## Cleanup
 

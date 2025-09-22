@@ -28,29 +28,16 @@ sudo mv ./kubectl /usr/local/bin
 kubectl version --client
 ```
 
-### Step 2: Connect to the Shared EKS Cluster
-The cluster is configured for anonymous access, so no AWS authentication is required:
+### Step 2: Set Up Cluster Access
 
 ```bash
-# Configure kubectl to connect to the training cluster
-kubectl config set-cluster training-cluster --server=https://YOUR_CLUSTER_ENDPOINT --insecure-skip-tls-verify=true
-
-# Set the context
-kubectl config set-context training-cluster --cluster=training-cluster
-
-# Use the context
-kubectl config use-context training-cluster
-
-# Verify connection to the cluster
-kubectl cluster-info
-
-# Test access
-kubectl get nodes
+# Run the setup script provided by instructor
+./student-setup.sh
 ```
 
-**Expected Output**: You should see cluster information and node list without any authentication prompts.
+**Expected Output**: You should see "Setup complete!" and a list of 2 worker nodes.
 
-### Step 3: Explore Existing Namespaces
+### Step 4: Explore Existing Namespaces
 Explore the namespaces that already exist in the cluster:
 
 ```bash

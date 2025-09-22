@@ -4,11 +4,11 @@ kind: ClusterConfig
 metadata:
   name: training-cluster
   region: us-east-2
-  version: "1.28"
 
 nodeGroups:
-- name: training-workers
+- name: workers
   instanceType: m5.large
   desiredCapacity: 2
   minSize: 2
   maxSize: 2
+  amiFamily: AmazonLinux2
