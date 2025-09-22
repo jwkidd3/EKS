@@ -32,8 +32,8 @@ sudo mv /tmp/eksctl /usr/local/bin
 eksctl version
 ```
 
-### kubectl Pre-installed in Cloud9
-kubectl is pre-installed in AWS Cloud9 environments, so no additional installation is required for students.
+### kubectl Installation
+Students will install kubectl during Lab 1 as part of the hands-on learning experience.
 
 ## Cluster Configuration File
 

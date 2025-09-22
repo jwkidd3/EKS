@@ -15,10 +15,15 @@
 
 ## Instructions
 
-### Step 1: Verify Pre-installed Tools
+### Step 1: Install and Verify Required Tools
 
-#### Verify kubectl (pre-installed in Cloud9)
+#### Install kubectl
 ```bash
+# Install kubectl
+curl -o kubectl https://s3.us-west-2.amazonaws.com/amazon-eks/1.28.3/2023-11-14/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+sudo mv ./kubectl /usr/local/bin
+
 # Verify kubectl is available
 kubectl version --client
 ```
