@@ -15,6 +15,20 @@ vpc:
 iam:
   withOIDC: true
 
+# API Server Configuration - Enable anonymous access
+kubernetesNetworkConfig:
+  serviceIPv4CIDR: 172.20.0.0/16
+
+# Enable anonymous access to cluster
+privateCluster:
+  enabled: false
+
+# Configure cluster endpoint access
+endpointConfig:
+  privateAccess: false
+  publicAccess: true
+  publicAccessCIDRs: ["0.0.0.0/0"]
+
 # Add-ons
 addons:
 - name: vpc-cni

@@ -4,10 +4,9 @@
 This document outlines the components and steps required to set up a **simplified shared EKS cluster** environment for the 3-day training course using eksctl for cluster creation and management.
 
 ### Key Simplifications
-- **Single IAM Role:** All 30 students use one common `EKS-Training-Role`
-- **Cloud9 Integration:** Simple role assumption in Cloud9 environments
-- **No Individual User Management:** Eliminates complex per-user IAM setup
-- **Streamlined Access:** One-command cluster access configuration
+- **Standard AWS Credentials:** Students use their existing AWS credentials
+- **No Custom IAM Setup:** Eliminates complex per-user IAM role management
+- **Streamlined Access:** Direct cluster access with standard AWS permissions
 
 ## Prerequisites
 - AWS Account with appropriate permissions
@@ -309,131 +308,6 @@ EOF
 kubectl get storageclass
 ```
 
-## User Management and RBAC
-
-### 1. Create Training User Role
-```bash
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: training-user
-rules:
-- apiGroups: [""]
-  resources: ["namespaces"]
-  verbs: ["get", "list", "create", "delete"]
-- apiGroups: [""]
-  resources: ["pods", "services", "deployments", "replicasets", "configmaps", "secrets", "persistentvolumeclaims"]
-  verbs: ["*"]
-- apiGroups: ["apps"]
-  resources: ["*"]
-  verbs: ["*"]
-- apiGroups: ["networking.k8s.io"]
-  resources: ["networkpolicies", "ingresses"]
-  verbs: ["*"]
-- apiGroups: ["autoscaling"]
-  resources: ["horizontalpodautoscalers"]
-  verbs: ["*"]
-- apiGroups: ["policy"]
-  resources: ["poddisruptionbudgets"]
-  verbs: ["*"]
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "list"]
-- apiGroups: ["metrics.k8s.io"]
-  resources: ["*"]
-  verbs: ["get", "list"]
-- apiGroups: ["storage.k8s.io"]
-  resources: ["storageclasses"]
-  verbs: ["get", "list", "use"]
-- apiGroups: [""]
-  resources: ["persistentvolumes"]
-  verbs: ["get", "list"]
-EOF
-```
-
-### 2. Create Common IAM Role for Cloud9 Access
-```bash
-# Create a common IAM role that all Cloud9 environments will assume
-cat <<EOF > eks-training-role-policy.json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "ec2.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-        },
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::${AWS_ACCOUNT_ID}:root"
-            },
-            "Action": "sts:AssumeRole"
-        }
-    ]
-}
-EOF
-
-# Create the role
-aws iam create-role \
-  --role-name EKS-Training-Role \
-  --assume-role-policy-document file://eks-training-role-policy.json
-
-# Attach necessary policies
-aws iam attach-role-policy \
-  --role-name EKS-Training-Role \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
-
-aws iam attach-role-policy \
-  --role-name EKS-Training-Role \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
-
-# Map the role to Kubernetes
-eksctl create iamidentitymapping \
-  --cluster training-cluster \
-  --region us-east-2 \
-  --arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role \
-  --group training-users \
-  --username training-user
-
-# Create ClusterRoleBinding
-cat <<EOF | kubectl apply -f -
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: training-users-binding
-subjects:
-- kind: Group
-  name: training-users
-  apiGroup: rbac.authorization.k8s.io
-roleRef:
-  kind: ClusterRole
-  name: training-user
-  apiGroup: rbac.authorization.k8s.io
-EOF
-```
-
-### 3. Verify Role Access
-```bash
-# Test that the role can access the cluster
-aws sts assume-role \
-  --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role \
-  --role-session-name test-session
-
-# Update kubeconfig with the new role
-aws eks update-kubeconfig \
-  --region us-east-2 \
-  --name training-cluster \
-  --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
-
-# Verify access
-kubectl auth can-i create namespace
-kubectl auth can-i create pods
-kubectl auth can-i get storageclasses
-```
 
 ## Monitoring and Observability
 
@@ -483,43 +357,6 @@ spec:
 EOF
 ```
 
-## Cloud9 Environment Setup for Students
-
-### Simple Role Assignment for Cloud9
-Each Cloud9 environment needs to assume the common training role:
-
-```bash
-# In each Cloud9 environment, configure AWS credentials to use the training role
-aws configure set role_arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
-aws configure set source_profile default
-
-# Or set environment variables
-export AWS_ROLE_ARN=arn:aws:iam::${AWS_ACCOUNT_ID}:role/EKS-Training-Role
-export AWS_WEB_IDENTITY_TOKEN_FILE=/var/run/secrets/eks.amazonaws.com/serviceaccount/token
-
-# Update kubeconfig in Cloud9
-aws eks update-kubeconfig --region us-east-2 --name training-cluster
-
-# Verify access
-kubectl get nodes
-kubectl auth can-i create pods
-```
-
-### Cloud9 Instance Profile Alternative
-Alternatively, attach the EKS-Training-Role directly to Cloud9 EC2 instances:
-
-```bash
-# Create instance profile
-aws iam create-instance-profile --instance-profile-name EKS-Training-Profile
-
-# Add role to instance profile
-aws iam add-role-to-instance-profile \
-  --instance-profile-name EKS-Training-Profile \
-  --role-name EKS-Training-Role
-
-# Attach to Cloud9 instances (do this for each Cloud9 environment)
-# This can be done through the EC2 console or AWS CLI
-```
 
 ## Validation and Testing
 
@@ -578,20 +415,6 @@ kubectl get deployment -n kube-system cluster-autoscaler
 kubectl get svc -n kube-ops-view
 ```
 
-### 3. Role Access Testing
-```bash
-# Test training role permissions (run from any Cloud9 environment)
-kubectl auth can-i create namespace
-kubectl auth can-i create pods
-kubectl auth can-i create networkpolicies
-kubectl auth can-i get nodes
-kubectl auth can-i get storageclasses
-kubectl auth can-i create persistentvolumeclaims
-
-# Test creating a sample namespace
-kubectl create namespace test-access
-kubectl delete namespace test-access
-```
 
 ## Cleanup Scripts
 
@@ -737,9 +560,9 @@ The cluster provides multiple storage classes for different lab scenarios:
 
 **Storage Access:**
 - All students have immediate access to create PVCs with any storage class
-- RBAC permissions configured for `get`, `list`, and `use` on storage classes
+- Standard Kubernetes RBAC applies based on AWS credentials
 - Automatic cleanup of PVCs when namespaces are deleted
 
 ---
 
-**Note**: This simplified environment setup using eksctl provides a production-ready, secure, and cost-effective EKS cluster for training purposes. All components are configured with best practices and can support **30 concurrent users** via a single common IAM role, making Cloud9 environment setup extremely simple.
+**Note**: This simplified environment setup using eksctl provides a production-ready, secure, and cost-effective EKS cluster for training purposes. All components are configured with best practices and can support **30 concurrent users** using standard AWS credentials.

@@ -28,61 +28,29 @@ sudo mv ./kubectl /usr/local/bin
 kubectl version --client
 ```
 
-#### Verify AWS CLI (pre-installed in Cloud9)
-```bash
-# AWS CLI is pre-installed in Cloud9 - just verify it's working
-aws --version
-
-# Verify your AWS identity
-aws sts get-caller-identity
-```
-
-### Step 2: Verify AWS Access
-Your AWS credentials are already configured in Cloud9:
+### Step 2: Connect to the Shared EKS Cluster
+The cluster is configured for anonymous access, so no AWS authentication is required:
 
 ```bash
-# Verify AWS configuration
-aws sts get-caller-identity
+# Configure kubectl to connect to the training cluster
+kubectl config set-cluster training-cluster --server=https://YOUR_CLUSTER_ENDPOINT --insecure-skip-tls-verify=true
 
-# Check current region
-aws configure get region
-```
+# Set the context
+kubectl config set-context training-cluster --cluster=training-cluster
 
-**Expected Output**: You should see your AWS account ID, user ARN, and user ID.
-
-### Step 3: Connect to the Shared EKS Cluster
-Update your kubeconfig to connect to the training cluster:
-
-```bash
-# Update kubeconfig for the training cluster
-aws eks update-kubeconfig --region us-east-2 --name training-cluster
-
-# Verify the context was added
-kubectl config get-contexts
+# Use the context
+kubectl config use-context training-cluster
 
 # Verify connection to the cluster
 kubectl cluster-info
-```
 
-**Expected Output**: You should see cluster information showing the EKS cluster endpoint.
-
-### Step 4: Verify Cluster Access
-Test your connection to the EKS cluster:
-
-```bash
-# Check cluster connection
-kubectl cluster-info
-
-# View cluster nodes
+# Test access
 kubectl get nodes
-
-# Check your current context
-kubectl config current-context
 ```
 
-**Expected Output**: You should see cluster information and a list of worker nodes.
+**Expected Output**: You should see cluster information and node list without any authentication prompts.
 
-### Step 5: Explore Existing Namespaces
+### Step 3: Explore Existing Namespaces
 Explore the namespaces that already exist in the cluster:
 
 ```bash
