@@ -1,0 +1,10 @@
+kubectl get pods,svc,deployments
+kubectl logs
+kubectl describe
+kubectl exec -it podname -- command 
+kubectl apply -f file.yaml
+
+
+
+common command line switches:
+-o yaml|json
