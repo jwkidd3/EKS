@@ -1,0 +1,17 @@
+Select m5.large under additional instance type
+
+connection should be ssh under network settings
+
+Modify iamrole for instance to Cloud9-EKS-Profile
+
+Turn off manage temp credentials in CLoud9 Settings
+
+Check with: aws sts get-caller-identity
+
+Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+
+Run: aws eks update-kubeconfig --region us-east-2 --name training-cluster
+
+Might need to: rm ~/.aws/credentials
