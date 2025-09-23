@@ -1,10 +1,12 @@
 Select m5.large under additional instance type
 
-connection should be ssh
+connection should be ssh under network settings
 
 Modify iamrole for instance to Cloud9-EKS-Profile
+
 Turn off manage temp credentials in CLoud9 Settings
-Check with aws sts get-caller-identity
+
+Check with: aws sts get-caller-identity
 
 Install kubectl
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
