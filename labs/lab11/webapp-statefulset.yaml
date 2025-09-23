@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: userX-webapp
+  labels:
+    app: webapp
+    owner: userX
+spec:
+  serviceName: userX-webapp-headless
+  replicas: 2
+  selector:
+    matchLabels:
+      app: webapp
+  template:
+    metadata:
+      labels:
+        app: webapp
+        owner: userX
+    spec:
+      containers:
+      - name: webapp
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+          name: http
+        volumeMounts:
+        - name: webapp-storage
+          mountPath: /usr/share/nginx/html
+        - name: session-storage
+          mountPath: /var/sessions
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+  volumeClaimTemplates:
+  - metadata:
+      name: webapp-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "gp3-immediate"
+      resources:
+        requests:
+          storage: 500Mi
+  - metadata:
+      name: session-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: "gp3-immediate"
+      resources:
+        requests:
+          storage: 100Mi

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-api-backend
+  labels:
+    app: api-backend
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-backend
+  template:
+    metadata:
+      labels:
+        app: api-backend
+        owner: userX
+    spec:
+      containers:
+      - name: api
+        image: hashicorp/http-echo:0.2.3
+        args:
+        - "-text=API Backend Pod: $(POD_NAME)"
+        - "-listen=:8080"
+        ports:
+        - containerPort: 8080
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-api-service
+  labels:
+    app: api-backend
+    owner: userX
+spec:
+  selector:
+    app: api-backend
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http

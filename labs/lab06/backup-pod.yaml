@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-backup-pod
+  namespace: userX-namespace
+  labels:
+    app: backup-tool
+    owner: userX
+spec:
+  containers:
+  - name: backup
+    image: busybox:1.35
+    command: ['sh', '-c', 'while true; do sleep 30; done']
+    volumeMounts:
+    - name: data-volume
+      mountPath: /data
+      readOnly: true
+    - name: backup-volume
+      mountPath: /backup
+    resources:
+      requests:
+        memory: "32Mi"
+        cpu: "25m"
+      limits:
+        memory: "64Mi"
+        cpu: "50m"
+  volumes:
+  - name: data-volume
+    persistentVolumeClaim:
+      claimName: userX-basic-storage
+  - name: backup-volume
+    emptyDir: {}

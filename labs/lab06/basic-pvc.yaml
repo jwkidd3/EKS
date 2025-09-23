@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: userX-basic-storage
+  namespace: userX-namespace
+  labels:
+    app: storage-demo
+    owner: userX
+spec:
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: gp3-immediate
+  resources:
+    requests:
+      storage: 2Gi

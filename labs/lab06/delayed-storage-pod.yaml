@@ -1,16 +1,19 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: userX-load-generator
+  name: userX-delayed-pod
   namespace: userX-namespace
   labels:
-    app: load-generator
+    app: delayed-storage
     owner: userX
 spec:
   containers:
-  - name: load-gen
-    image: nicolaka/netshoot:latest
+  - name: app
+    image: busybox:1.35
     command: ['sh', '-c', 'while true; do sleep 30; done']
+    volumeMounts:
+    - name: delayed-volume
+      mountPath: /data
     resources:
       requests:
         memory: "32Mi"
@@ -18,3 +21,7 @@ spec:
       limits:
         memory: "64Mi"
         cpu: "50m"
+  volumes:
+  - name: delayed-volume
+    persistentVolumeClaim:
+      claimName: userX-delayed-storage

@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-quota-test
+  namespace: userX-namespace
+  labels:
+    app: quota-test
+    owner: userX
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: quota-test
+  template:
+    metadata:
+      labels:
+        app: quota-test
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.21-alpine
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"

@@ -261,16 +261,16 @@ Congratulations! You have completed all 13 labs covering:
 1. **Cluster Exploration** - Understanding EKS basics
 2. **Pod Management** - Working with basic Kubernetes objects
 3. **Service Discovery** - Networking and service exposure
-4. **Deployments** - Application lifecycle management
-5. **Microservices** - Multi-tier application deployment
-6. **Helm** - Package management and templating
-7. **Health Checks** - Application monitoring and reliability
-8. **Autoscaling** - Dynamic resource management
-9. **RBAC** - Security and access control
-10. **Network Policies** - Traffic control and isolation
-11. **Node Management** - Workload placement and scheduling
-12. **Stateful Applications** - Persistent data management
-13. **Troubleshooting** - Advanced debugging and deployment patterns
+4. **Deployments and ReplicaSets** - Application lifecycle management
+5. **ConfigMaps and Secrets** - Configuration management
+6. **Persistent Volumes and Storage** - Data persistence
+7. **Resource Management and Autoscaling** - Dynamic resource allocation
+8. **Health Checks and Probes** - Application monitoring and reliability
+9. **Jobs and CronJobs** - Batch processing and scheduled tasks
+10. **Network Policies and Security** - Traffic control and isolation
+11. **StatefulSets and Headless Services** - Stateful application management
+12. **Ingress and Load Balancing** - HTTP/HTTPS traffic routing
+13. **Monitoring and Troubleshooting** - Advanced debugging and deployment patterns
 
 You now have hands-on experience with essential EKS and Kubernetes concepts!
 

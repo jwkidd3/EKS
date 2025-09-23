@@ -52,9 +52,10 @@
                 <div class="key-point">
                     <h3>Day 2: Application Management</h3>
                     <ul class="smaller">
-                        <li>✅ Microservices deployment patterns</li>
-                        <li>✅ Helm package management</li>
-                        <li>✅ Health checks and autoscaling</li>
+                        <li>✅ ConfigMaps and Secrets for configuration</li>
+                        <li>✅ Persistent Volumes and storage management</li>
+                        <li>✅ Resource management and autoscaling</li>
+                        <li>✅ Health checks and application probes</li>
                     </ul>
                 </div>
                 <div class="security">
@@ -68,14 +69,14 @@
                 <h2>Day 3 Agenda</h2>
                 <ul>
                     <li><strong>Module 3:</strong> Security and Access Control</li>
-                    <li><strong>Lab 9:</strong> Implementing RBAC</li>
+                    <li><strong>Lab 9:</strong> Jobs and CronJobs</li>
                     <li><strong>Lab 10:</strong> Network Security and Policies</li>
-                    <li><strong>Lab 11:</strong> Node Management and Workload Placement</li>
-                    <li><strong>Lab 12:</strong> Stateful Applications</li>
+                    <li><strong>Lab 11:</strong> StatefulSets and Headless Services</li>
+                    <li><strong>Lab 12:</strong> Ingress and Load Balancing</li>
                     <li><strong>Lab 13:</strong> Troubleshooting and Advanced Deployment Patterns</li>
                 </ul>
                 <div class="security">
-                    <strong>Focus:</strong> Production-ready security, networking, and operational patterns
+                    <strong>Focus:</strong> Batch processing, network security, stateful applications, and advanced operations
                 </div>
             </section>
 
@@ -308,17 +309,17 @@ roleRef:
             <!-- Lab 9 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 9: Implementing RBAC</h2>
+                    <h2>🔬 Lab 9: Jobs and CronJobs</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Create service accounts for applications</li>
-                        <li>Define roles with specific permissions</li>
-                        <li>Create role bindings for users and service accounts</li>
-                        <li>Test access controls with different contexts</li>
-                        <li>Troubleshoot permission issues</li>
+                        <li>Create and manage one-time Jobs for batch processing</li>
+                        <li>Configure parallel job execution patterns</li>
+                        <li>Set up CronJobs for scheduled tasks</li>
+                        <li>Handle job failures and retry logic</li>
+                        <li>Implement job cleanup policies with TTL</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> RBAC configuration, security testing, access control</p>
+                    <p><strong>Key Skills:</strong> Batch processing, scheduled tasks, job management, cleanup automation</p>
                 </div>
             </section>
 
@@ -662,17 +663,17 @@ kubectl taint nodes node1 key:NoSchedule-
             <!-- Lab 11 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 11: Node Management and Workload Placement</h2>
+                    <h2>🔬 Lab 11: StatefulSets and Headless Services</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Use NodeSelector to assign pods to specific nodes</li>
-                        <li>Configure node affinity rules for placement</li>
-                        <li>Implement anti-affinity to spread pods</li>
-                        <li>Test workload placement with different configurations</li>
-                        <li>Use taints and tolerations for specialized workloads</li>
+                        <li>Deploy and manage StatefulSets for stateful applications</li>
+                        <li>Configure headless services for stable network identities</li>
+                        <li>Manage persistent volume claims with StatefulSets</li>
+                        <li>Practice StatefulSet scaling and rolling updates</li>
+                        <li>Troubleshoot StatefulSet deployment issues</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> Workload placement, node management, scheduling</p>
+                    <p><strong>Key Skills:</strong> Stateful applications, persistent storage, ordered deployments</p>
                 </div>
             </section>
 
@@ -844,17 +845,17 @@ spec:
             <!-- Lab 12 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 12: Stateful Applications</h2>
+                    <h2>🔬 Lab 12: Ingress and Load Balancing</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Deploy StatefulSets for persistent identity</li>
-                        <li>Use pre-configured EBS CSI driver for volumes</li>
-                        <li>Practice scaling stateful applications</li>
-                        <li>Implement backup and restore procedures</li>
-                        <li>Understand stateful application patterns</li>
+                        <li>Deploy and configure Kubernetes Ingress controllers</li>
+                        <li>Create path-based and host-based routing rules</li>
+                        <li>Configure SSL/TLS termination at the Ingress layer</li>
+                        <li>Implement advanced load balancing strategies</li>
+                        <li>Practice ingress troubleshooting and monitoring</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> StatefulSets, persistent storage, data management</p>
+                    <p><strong>Key Skills:</strong> HTTP routing, load balancing, SSL termination, ingress management</p>
                 </div>
             </section>
 

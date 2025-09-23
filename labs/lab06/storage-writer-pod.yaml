@@ -1,16 +1,19 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: userX-load-generator
+  name: userX-storage-writer
   namespace: userX-namespace
   labels:
-    app: load-generator
+    app: storage-writer
     owner: userX
 spec:
   containers:
-  - name: load-gen
-    image: nicolaka/netshoot:latest
+  - name: writer
+    image: busybox:1.35
     command: ['sh', '-c', 'while true; do sleep 30; done']
+    volumeMounts:
+    - name: data-volume
+      mountPath: /data
     resources:
       requests:
         memory: "32Mi"
@@ -18,3 +21,7 @@ spec:
       limits:
         memory: "64Mi"
         cpu: "50m"
+  volumes:
+  - name: data-volume
+    persistentVolumeClaim:
+      claimName: userX-basic-storage

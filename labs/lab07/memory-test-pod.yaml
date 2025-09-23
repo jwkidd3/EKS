@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: userX-memory-test
+  namespace: userX-namespace
+  labels:
+    app: memory-test
+    owner: userX
+spec:
+  containers:
+  - name: memory-hog
+    image: busybox:1.35
+    command: ['sh', '-c', 'dd if=/dev/zero of=/tmp/memory bs=1M count=500; sleep 300']
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+  restartPolicy: Never

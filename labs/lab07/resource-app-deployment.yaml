@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-resource-app
+  namespace: userX-namespace
+  labels:
+    app: resource-app
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: resource-app
+  template:
+    metadata:
+      labels:
+        app: resource-app
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        env:
+        - name: CPU_STRESS
+          value: "false"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-resource-app
+  namespace: userX-namespace
+  labels:
+    app: resource-app
+    owner: userX
+spec:
+  selector:
+    app: resource-app
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

@@ -60,14 +60,13 @@
             <section>
                 <h2>Day 2 Agenda</h2>
                 <ul>
-                    <li><strong>Lab 5:</strong> Deploying Microservices to EKS</li>
-                    <li><strong>Module 2:</strong> Package Management with Helm</li>
-                    <li><strong>Lab 6:</strong> Application Deployment with Helm</li>
-                    <li><strong>Lab 7:</strong> Application Health and Monitoring</li>
-                    <li><strong>Lab 8:</strong> Autoscaling Deep Dive</li>
+                    <li><strong>Lab 5:</strong> ConfigMaps and Secrets</li>
+                    <li><strong>Lab 6:</strong> Persistent Volumes and Storage</li>
+                    <li><strong>Lab 7:</strong> Resource Management and Autoscaling</li>
+                    <li><strong>Lab 8:</strong> Health Checks and Probes</li>
                 </ul>
                 <div class="key-point">
-                    <strong>Learning Focus:</strong> Production-ready application deployment patterns and operational practices
+                    <strong>Learning Focus:</strong> Configuration management, data persistence, resource optimization, and application reliability
                 </div>
             </section>
 
@@ -223,17 +222,17 @@ Microservices Architecture:
             <!-- Lab 5 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 5: Deploying Microservices to EKS</h2>
+                    <h2>🔬 Lab 5: ConfigMaps and Secrets</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Deploy NodeJS backend API with Redis</li>
-                        <li>Deploy Crystal backend API</li>
-                        <li>Create frontend application</li>
-                        <li>Test end-to-end functionality</li>
-                        <li>Scale microservices independently</li>
+                        <li>Create ConfigMaps from literal values and files</li>
+                        <li>Create and manage Kubernetes Secrets</li>
+                        <li>Use ConfigMaps and Secrets as environment variables</li>
+                        <li>Mount configuration data as volumes</li>
+                        <li>Configure TLS certificates for HTTPS</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> Microservices architecture, inter-service communication</p>
+                    <p><strong>Key Skills:</strong> Configuration management, secrets handling, secure deployments</p>
                 </div>
             </section>
 
@@ -570,17 +569,17 @@ helm uninstall my-app
             <!-- Lab 6 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 6: Application Deployment with Helm</h2>
+                    <h2>🔬 Lab 6: Persistent Volumes and Storage</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Search and explore Helm charts</li>
-                        <li>Deploy applications using existing charts</li>
-                        <li>Customize deployments with values files</li>
-                        <li>Create a simple custom Helm chart</li>
-                        <li>Practice upgrade and rollback operations</li>
+                        <li>Create and manage Persistent Volume Claims</li>
+                        <li>Deploy StatefulSets with persistent storage</li>
+                        <li>Work with different storage classes</li>
+                        <li>Practice volume expansion and snapshots</li>
+                        <li>Implement backup and restore procedures</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> Helm package management, templating, releases</p>
+                    <p><strong>Key Skills:</strong> Persistent storage, StatefulSets, data persistence, backup strategies</p>
                 </div>
             </section>
 
@@ -708,17 +707,17 @@ livenessProbe:
             <!-- Lab 7 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 7: Application Health and Monitoring</h2>
+                    <h2>🔬 Lab 7: Resource Management and Autoscaling</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Configure liveness probes for restarts</li>
-                        <li>Set up readiness probes for traffic management</li>
-                        <li>Test probe behavior with broken applications</li>
-                        <li>Monitor application health through events</li>
-                        <li>Implement best practices for health checks</li>
+                        <li>Configure resource requests and limits</li>
+                        <li>Set up Horizontal Pod Autoscaler (HPA)</li>
+                        <li>Create resource quotas for namespace management</li>
+                        <li>Generate load to trigger autoscaling</li>
+                        <li>Monitor resource usage and optimize applications</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> Health monitoring, probe configuration, debugging</p>
+                    <p><strong>Key Skills:</strong> Resource optimization, autoscaling, performance monitoring</p>
                 </div>
             </section>
 
@@ -937,17 +936,17 @@ kubectl top nodes
             <!-- Lab 8 Callout -->
             <section class="center">
                 <div class="lab-callout">
-                    <h2>🔬 Lab 8: Autoscaling Deep Dive</h2>
+                    <h2>🔬 Lab 8: Health Checks and Probes</h2>
                     <h3>Duration: 45 minutes</h3>
                     <p><strong>Objectives:</strong></p>
                     <ul style="text-align: left; display: inline-block;">
-                        <li>Explore kube-ops-view for cluster visualization</li>
-                        <li>Configure HPA based on CPU metrics</li>
-                        <li>Generate load to trigger autoscaling</li>
-                        <li>Observe HPA behavior and decisions</li>
-                        <li>Test memory-based autoscaling</li>
+                        <li>Configure liveness, readiness, and startup probes</li>
+                        <li>Test different probe types (HTTP, TCP, exec)</li>
+                        <li>Simulate application failures and recovery</li>
+                        <li>Integrate probes with service endpoints</li>
+                        <li>Practice troubleshooting probe issues</li>
                     </ul>
-                    <p><strong>Key Skills:</strong> Autoscaling configuration, load testing, monitoring</p>
+                    <p><strong>Key Skills:</strong> Application health monitoring, failure recovery, probe configuration</p>
                 </div>
             </section>
 

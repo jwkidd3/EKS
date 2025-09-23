@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-load-test
+  labels:
+    app: load-test
+    owner: userX
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: load-test
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting load test against userX-frontend-service..."
+          for i in $(seq 1 100); do
+            echo "Request $i:"
+            wget -qO- userX-frontend-service/ || echo "Failed"
+            sleep 0.1
+          done
+          echo "Load test completed"
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"

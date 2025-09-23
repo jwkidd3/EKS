@@ -1,339 +1,276 @@
-# Lab 6: Application Deployment with Helm
+# Lab 6: Persistent Volumes and Storage
 
 ## Duration: 45 minutes
 
 ## Objectives
-- Search and explore available Helm charts
-- Deploy applications using existing Helm charts
-- Customize deployments using values files
-- Upgrade and rollback Helm releases
-- Create a simple custom Helm chart
+- Create and manage PersistentVolumes and PersistentVolumeClaims
+- Use different storage classes and binding modes
+- Deploy stateful applications with persistent storage
+- Practice storage expansion and backup scenarios
+- Understand storage lifecycle and data persistence
 
 ## Prerequisites
-- Lab 5 completed (microservices deployment)
+- Lab 5 completed (ConfigMaps and Secrets)
 - kubectl configured to use your namespace
-- Helm 3.x installed
+- EBS CSI driver installed on cluster
 
 ## Instructions
 
-### Step 1: Clean Up Previous Resources
-Start with a clean environment:
+### Step 1: Clean Up and Explore Storage Classes
+Start fresh and examine available storage options:
 
 ```bash
-# Clean up previous lab resources
+# Clean up previous resources
 kubectl delete deployment --all
-kubectl delete svc --all
+kubectl delete pvc --all
 kubectl delete configmap --all
-kubectl get all
+kubectl delete secret --all
 
-# Verify namespace is clean
-kubectl get pods
+# Explore available storage classes
+kubectl get storageclass
+kubectl describe storageclass gp3
+kubectl describe storageclass gp3-immediate
+kubectl describe storageclass fast-ssd
 ```
 
-### Step 2: Initialize Helm and Add Repositories
-Set up Helm repositories for chart discovery:
+### Step 2: Create Basic PersistentVolumeClaim
+Create a simple PVC with immediate binding:
 
 ```bash
-# Add popular Helm repositories
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo add stable https://charts.helm.sh/stable
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+# Create immediate-binding PVC
+sed 's/userX/user1/g' basic-pvc.yaml > my-basic-pvc.yaml
+kubectl apply -f my-basic-pvc.yaml
 
-# Update repository information
-helm repo update
+# Check PVC status - should bind immediately
+kubectl get pvc user1-basic-storage
+kubectl get pv
 
-# List available repositories
-helm repo list
-
-# Search for available charts
-helm search repo redis
-helm search repo nginx
-helm search repo mysql
+# Examine the created PV details
+PV_NAME=$(kubectl get pvc user1-basic-storage -o jsonpath='{.spec.volumeName}')
+kubectl describe pv $PV_NAME
 ```
 
-### Step 3: Deploy Redis Using Bitnami Chart
-Deploy Redis using a pre-built Helm chart:
+### Step 3: Deploy Application with Persistent Storage
+Deploy a simple file-writing application:
 
 ```bash
-# Search for Redis charts
-helm search repo redis --versions
+# Deploy pod with persistent storage
+sed 's/userX/user1/g' storage-writer-pod.yaml > my-storage-writer-pod.yaml
+kubectl apply -f my-storage-writer-pod.yaml
 
-# Show chart information
-helm show chart bitnami/redis
-helm show values bitnami/redis > redis-values.yaml
+# Wait for pod to be ready
+kubectl wait --for=condition=Ready pod/user1-storage-writer --timeout=60s
 
-# Install Redis with custom values
-helm install user1-redis bitnami/redis \
-  --namespace user1-namespace \
-  --set auth.enabled=false \
-  --set replica.replicaCount=1 \
-  --set master.persistence.enabled=false \
-  --set replica.persistence.enabled=false
+# Write some data to persistent storage
+kubectl exec user1-storage-writer -- sh -c 'echo "Hello from Kubernetes $(date)" >> /data/application.log'
+kubectl exec user1-storage-writer -- sh -c 'echo "User: user1" >> /data/application.log'
+kubectl exec user1-storage-writer -- sh -c 'echo "Pod: $(hostname)" >> /data/application.log'
 
-# Check the deployment
-helm list -n user1-namespace
-kubectl get pods -l app.kubernetes.io/name=redis
+# Verify data was written
+kubectl exec user1-storage-writer -- cat /data/application.log
+kubectl exec user1-storage-writer -- ls -la /data/
 ```
 
-### Step 4: Create Custom Values File
-Create a custom values file for more complex configuration:
+### Step 4: Test Data Persistence
+Delete and recreate the pod to verify data persists:
 
 ```bash
-# Create custom values for MySQL
-sed 's/userX/user1/g' mysql-values.yaml > my-mysql-values.yaml
+# Delete the pod
+kubectl delete pod user1-storage-writer
 
-# Deploy MySQL with custom values
-helm install user1-mysql bitnami/mysql \
-  --namespace user1-namespace \
-  --values my-mysql-values.yaml
+# Recreate the pod
+kubectl apply -f my-storage-writer-pod.yaml
+kubectl wait --for=condition=Ready pod/user1-storage-writer --timeout=60s
 
-# Check MySQL deployment
-kubectl get pods -l app.kubernetes.io/name=mysql
-kubectl get pvc -l app.kubernetes.io/name=mysql
+# Verify old data is still there
+kubectl exec user1-storage-writer -- cat /data/application.log
+
+# Add more data from the new pod
+kubectl exec user1-storage-writer -- sh -c 'echo "Data persisted! New pod: $(hostname)" >> /data/application.log'
+kubectl exec user1-storage-writer -- cat /data/application.log
 ```
 
-### Step 5: Deploy Web Application Using Helm
-Deploy a web application that connects to the databases:
+### Step 5: Create StatefulSet with Persistent Storage
+Deploy a StatefulSet for more advanced storage scenarios:
 
 ```bash
-# Deploy nginx web server
-helm install user1-nginx bitnami/nginx \
-  --namespace user1-namespace \
-  --set service.type=LoadBalancer \
-  --set replicaCount=2
+# Create StatefulSet with persistent storage
+sed 's/userX/user1/g' data-statefulset.yaml > my-data-statefulset.yaml
+kubectl apply -f my-data-statefulset.yaml
 
-# Check web server deployment
-kubectl get pods -l app.kubernetes.io/name=nginx
-kubectl get svc -l app.kubernetes.io/name=nginx
+# Watch StatefulSet pods come up
+kubectl get statefulset user1-data-app -w
+# Press Ctrl+C after pods are ready
+
+# Check the automatically created PVCs
+kubectl get pvc | grep user1-data-app
+kubectl get pv
+
+# Verify each pod has its own storage
+kubectl exec user1-data-app-0 -- sh -c 'echo "Pod 0 data $(date)" > /data/pod0.txt'
+kubectl exec user1-data-app-1 -- sh -c 'echo "Pod 1 data $(date)" > /data/pod1.txt'
+
+# Check data isolation
+kubectl exec user1-data-app-0 -- ls -la /data/
+kubectl exec user1-data-app-1 -- ls -la /data/
 ```
 
-### Step 6: Monitor and Manage Helm Releases
-Learn to manage Helm releases:
+### Step 6: Scale StatefulSet and Observe Storage
+Scale the StatefulSet and see how storage behaves:
 
 ```bash
-# List all releases in namespace
-helm list -n user1-namespace
+# Scale up the StatefulSet
+kubectl scale statefulset user1-data-app --replicas=3
 
-# Get release status
-helm status user1-redis -n user1-namespace
-helm status user1-mysql -n user1-namespace
+# Watch new pod creation
+kubectl get pods -l app=data-app -w
+# Press Ctrl+C after new pod is ready
 
-# Get release history
-helm history user1-redis -n user1-namespace
+# Check that new pod gets its own PVC
+kubectl get pvc | grep user1-data-app
+kubectl exec user1-data-app-2 -- sh -c 'echo "Pod 2 data $(date)" > /data/pod2.txt'
 
-# Get release values
-helm get values user1-redis -n user1-namespace
-helm get manifest user1-redis -n user1-namespace
+# Scale down
+kubectl scale statefulset user1-data-app --replicas=2
+
+# Verify PVCs are retained even after scaling down
+kubectl get pvc | grep user1-data-app
+kubectl get pods -l app=data-app
+
+# Scale back up and verify data persistence
+kubectl scale statefulset user1-data-app --replicas=3
+kubectl wait --for=condition=Ready pod/user1-data-app-2 --timeout=60s
+kubectl exec user1-data-app-2 -- cat /data/pod2.txt
 ```
 
-### Step 7: Upgrade Helm Releases
-Practice upgrading releases with new configurations:
+### Step 7: Storage Expansion
+Practice expanding PVC size:
 
 ```bash
-# Upgrade Redis with different configuration
-helm upgrade user1-redis bitnami/redis \
-  --namespace user1-namespace \
-  --set auth.enabled=false \
-  --set replica.replicaCount=2 \
-  --set master.persistence.enabled=false \
-  --set replica.persistence.enabled=false
+# Check current size
+kubectl get pvc user1-basic-storage -o jsonpath='{.spec.resources.requests.storage}'
 
-# Check upgrade status
-helm history user1-redis -n user1-namespace
-kubectl get pods -l app.kubernetes.io/name=redis
+# Expand the PVC (requires allowVolumeExpansion: true in storage class)
+kubectl patch pvc user1-basic-storage -p '{"spec":{"resources":{"requests":{"storage":"3Gi"}}}}'
 
-# Upgrade nginx with more replicas
-helm upgrade user1-nginx bitnami/nginx \
-  --namespace user1-namespace \
-  --set replicaCount=3 \
-  --set service.type=LoadBalancer
+# Monitor expansion progress
+kubectl describe pvc user1-basic-storage
 
-# Verify the upgrade
-kubectl get pods -l app.kubernetes.io/name=nginx
+# Verify expansion in pod
+kubectl exec user1-storage-writer -- df -h /data
 ```
 
-### Step 8: Create a Custom Helm Chart
-Create your own Helm chart for the microservices from Lab 5:
+### Step 8: Different Storage Classes
+Create PVCs with different storage classes:
 
 ```bash
-# Create a new Helm chart
-helm create user1-microservices
+# Create fast SSD PVC
+sed 's/userX/user1/g' fast-storage-pvc.yaml > my-fast-storage-pvc.yaml
+kubectl apply -f my-fast-storage-pvc.yaml
 
-# Examine the generated structure
-ls -la user1-microservices/
-tree user1-microservices/
+# Create waiting-for-consumer PVC
+sed 's/userX/user1/g' delayed-pvc.yaml > my-delayed-pvc.yaml
+kubectl apply -f my-delayed-pvc.yaml
 
-# Edit the chart files
-sed 's/userX/user1/g' Chart.yaml > user1-microservices/Chart.yaml
-sed 's/userX/user1/g' values.yaml > user1-microservices/values.yaml
+# Check PVC statuses
+kubectl get pvc
+
+# Note: delayed PVC should be Pending until bound to a pod
+# Deploy pod to bind the delayed PVC
+sed 's/userX/user1/g' delayed-storage-pod.yaml > my-delayed-storage-pod.yaml
+kubectl apply -f my-delayed-storage-pod.yaml
+
+# Now check PVC status again
+kubectl get pvc user1-delayed-storage
 ```
 
-### Step 9: Customize the Helm Chart Templates
-Modify the chart templates for your microservices:
+### Step 9: Storage Backup Simulation
+Practice creating "backups" by copying data:
 
 ```bash
-# Replace the default templates with your microservices
-cp microservices-deployment.yaml user1-microservices/templates/
-cp microservices-service.yaml user1-microservices/templates/
-cp microservices-configmap.yaml user1-microservices/templates/
+# Create a backup pod with access to existing PVC
+sed 's/userX/user1/g' backup-pod.yaml > my-backup-pod.yaml
+kubectl apply -f my-backup-pod.yaml
+kubectl wait --for=condition=Ready pod/user1-backup-pod --timeout=60s
 
-# Remove default files if needed
-rm user1-microservices/templates/deployment.yaml
-rm user1-microservices/templates/service.yaml
+# Create backup of data
+kubectl exec user1-backup-pod -- sh -c 'tar czf /backup/app-data-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .'
+kubectl exec user1-backup-pod -- ls -la /backup/
 
-# Validate the chart
-helm lint user1-microservices/
+# Simulate data corruption
+kubectl exec user1-storage-writer -- sh -c 'rm -f /data/application.log'
+kubectl exec user1-storage-writer -- ls -la /data/
+
+# Restore from backup
+BACKUP_FILE=$(kubectl exec user1-backup-pod -- ls /backup/ | grep tar.gz | head -1)
+kubectl exec user1-backup-pod -- sh -c "tar xzf /backup/$BACKUP_FILE -C /data/"
+kubectl exec user1-storage-writer -- cat /data/application.log
 ```
 
-### Step 10: Install Your Custom Chart
-Deploy your custom chart:
+### Step 10: Storage Troubleshooting
+Practice common storage troubleshooting scenarios:
 
 ```bash
-# Install the custom chart
-helm install user1-app user1-microservices/ \
-  --namespace user1-namespace \
-  --values user1-microservices/values.yaml
+# Check PVC events
+kubectl describe pvc user1-basic-storage
 
-# Check the deployment
-helm list -n user1-namespace
-kubectl get pods -l app.kubernetes.io/managed-by=Helm
+# Check PV events
+PV_NAME=$(kubectl get pvc user1-basic-storage -o jsonpath='{.spec.volumeName}')
+kubectl describe pv $PV_NAME
 
-# Test the application
-kubectl get svc
-```
+# Check storage class details
+kubectl describe storageclass gp3-immediate
 
-### Step 11: Test Application Connectivity
-Verify that Helm-deployed applications work together:
+# Monitor storage-related events
+kubectl get events --field-selector reason=VolumeMount
+kubectl get events --field-selector reason=VolumeMountMismatches
 
-```bash
-# Create a test pod for connectivity testing
-sed 's/userX/user1/g' helm-test-pod.yaml > my-helm-test-pod.yaml
-kubectl apply -f my-helm-test-pod.yaml
+# Check EBS volumes in AWS (if curious)
+aws ec2 describe-volumes --filters "Name=tag:kubernetes.io/cluster/training-cluster,Values=owned" --query 'Volumes[*].[VolumeId,Size,State,VolumeType]' --output table
 
-# Test Redis connectivity
-kubectl exec user1-helm-test -- redis-cli -h user1-redis-master ping
-
-# Test MySQL connectivity
-kubectl exec user1-helm-test -- mysql -h user1-mysql -u root -ppassword -e "SHOW DATABASES;"
-
-# Test web server
-kubectl exec user1-helm-test -- curl -s http://user1-nginx/
-```
-
-### Step 12: Practice Rollbacks
-Learn to rollback releases when issues occur:
-
-```bash
-# Simulate a bad upgrade (invalid configuration)
-helm upgrade user1-nginx bitnami/nginx \
-  --namespace user1-namespace \
-  --set replicaCount=10 \
-  --set resources.requests.memory=10Gi
-
-# Check if pods are pending due to resource constraints
-kubectl get pods -l app.kubernetes.io/name=nginx
-
-# Rollback to previous version
-helm rollback user1-nginx 1 -n user1-namespace
-
-# Verify rollback
-helm history user1-nginx -n user1-namespace
-kubectl get pods -l app.kubernetes.io/name=nginx
-```
-
-### Step 13: Package and Share Your Chart
-Learn to package charts for distribution:
-
-```bash
-# Package your custom chart
-helm package user1-microservices/
-
-# Verify the package
-ls -la user1-microservices-*.tgz
-
-# Install from the package
-helm install user1-packaged-app user1-microservices-*.tgz \
-  --namespace user1-namespace \
-  --set fullnameOverride=user1-packaged
-
-# Check the installation
-helm list -n user1-namespace
+# View storage usage in pods
+kubectl exec user1-storage-writer -- df -h
+kubectl exec user1-data-app-0 -- du -sh /data/*
 ```
 
 ## Verification Steps
 
-### Verify Your Helm Deployments
-Run these commands to verify everything is working:
+Run these commands to verify your storage setup:
 
 ```bash
-# 1. Check all Helm releases
-helm list -n user1-namespace
+# 1. Verify PVCs are bound
+kubectl get pvc | grep user1 | grep Bound
 
-# 2. Verify all pods are running
-kubectl get pods
+# 2. Verify PVs exist
+kubectl get pv | grep user1
 
-# 3. Check services created by Helm
-kubectl get svc -l app.kubernetes.io/managed-by=Helm
+# 3. Verify StatefulSet storage
+kubectl get pvc | grep user1-data-app | wc -l  # Should show 3 PVCs
 
-# 4. Test connectivity between Helm-deployed services
-kubectl exec user1-helm-test -- curl -s http://user1-nginx/
+# 4. Verify data persistence
+kubectl exec user1-storage-writer -- cat /data/application.log | wc -l  # Should show multiple lines
 
-# 5. Verify persistent volumes (if any)
-kubectl get pvc
+# 5. Check storage expansion worked
+kubectl get pvc user1-basic-storage -o jsonpath='{.spec.resources.requests.storage}'  # Should show 3Gi
 ```
 
-## Clean Up
-Remove Helm releases and clean up:
+## Key Takeaways
+- PVCs abstract storage requests from specific implementations
+- StatefulSets automatically create PVCs for each pod replica
+- Data persists across pod restarts and deletions
+- Storage classes define different types of storage with varying performance
+- PVC expansion is supported but requires storage class configuration
+- Backup strategies are important for persistent data
+- Storage troubleshooting involves checking PVC, PV, and storage class events
 
+## Cleanup
 ```bash
-# Uninstall all Helm releases
-helm uninstall user1-redis -n user1-namespace
-helm uninstall user1-mysql -n user1-namespace
-helm uninstall user1-nginx -n user1-namespace
-helm uninstall user1-app -n user1-namespace
-helm uninstall user1-packaged-app -n user1-namespace
-
-# Delete custom charts and packages
-rm -rf user1-microservices/
-rm -f user1-microservices-*.tgz
-
-# Clean up test resources
-kubectl delete pod user1-helm-test
+kubectl delete statefulset user1-data-app
+kubectl delete pod user1-storage-writer user1-backup-pod user1-delayed-storage-pod
+kubectl delete pvc user1-basic-storage user1-fast-storage user1-delayed-storage
+kubectl delete pvc -l app=data-app  # Clean up StatefulSet PVCs
 ```
-
-## Troubleshooting
-
-### Common Issues
-1. **Chart not found**: Ensure repositories are added and updated
-2. **Values not applied**: Check YAML syntax and indentation
-3. **Release failed**: Use `helm status` and `kubectl describe` to debug
-4. **Permission denied**: Verify namespace access and RBAC permissions
-
-### Useful Commands
-```bash
-# Debug Helm releases
-helm get all <release-name> -n <namespace>
-helm get hooks <release-name> -n <namespace>
-
-# Template validation
-helm template <chart> --debug
-
-# Dry run installation
-helm install <release> <chart> --dry-run --debug
-```
-
-## Key Concepts Learned
-- **Helm Repositories**: Adding and managing chart repositories
-- **Chart Discovery**: Searching for and exploring available charts
-- **Values Customization**: Using values files to customize deployments
-- **Release Management**: Installing, upgrading, and rolling back releases
-- **Chart Creation**: Building custom Helm charts for applications
-- **Package Management**: Packaging and distributing Helm charts
-- **Troubleshooting**: Debugging Helm deployments and releases
-
-## Next Steps
-In the next lab, you'll learn how to implement health checks and monitoring for your applications to ensure they're running properly and can recover from failures.
 
 ---
 
-**Remember**: Helm simplifies application deployment and management, but understanding the underlying Kubernetes resources is still important!
+**Remember**: Always use your assigned username prefix (userX-) for all resources you create!

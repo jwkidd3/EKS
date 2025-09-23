@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: userX-data-app
+  namespace: userX-namespace
+  labels:
+    app: data-app
+    owner: userX
+spec:
+  serviceName: userX-data-app
+  replicas: 2
+  selector:
+    matchLabels:
+      app: data-app
+  template:
+    metadata:
+      labels:
+        app: data-app
+        owner: userX
+    spec:
+      containers:
+      - name: data-container
+        image: busybox:1.35
+        command: ['sh', '-c', 'while true; do sleep 30; done']
+        volumeMounts:
+        - name: data-storage
+          mountPath: /data
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+  volumeClaimTemplates:
+  - metadata:
+      name: data-storage
+      labels:
+        app: data-app
+        owner: userX
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: gp3
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-data-app
+  namespace: userX-namespace
+  labels:
+    app: data-app
+    owner: userX
+spec:
+  clusterIP: None
+  selector:
+    app: data-app
+  ports:
+  - port: 80
+    targetPort: 80

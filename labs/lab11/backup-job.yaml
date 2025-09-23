@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-database-backup
+  labels:
+    app: database-backup
+    owner: userX
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: backup
+        image: postgres:13-alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Starting backup process..."
+          mkdir -p /data/backups
+          echo "Backup completed at $(date)" > /data/backups/backup-$(date +%Y%m%d-%H%M%S).txt
+          ls -la /data/backups/
+          echo "Backup job completed successfully"
+        volumeMounts:
+        - name: database-data
+          mountPath: /data
+        env:
+        - name: BACKUP_DATE
+          value: "$(date +%Y%m%d)"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"
+      volumes:
+      - name: database-data
+        persistentVolumeClaim:
+          claimName: data-userX-database-0

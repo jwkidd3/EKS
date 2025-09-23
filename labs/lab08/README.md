@@ -1,430 +1,212 @@
-# Lab 8: Autoscaling Deep Dive
+# Lab 8: Health Checks and Probes
 
 ## Duration: 45 minutes
 
 ## Objectives
-- Explore pre-installed kube-ops-view for visual cluster monitoring
-- Configure Horizontal Pod Autoscaler (HPA) based on CPU metrics
-- Generate load to trigger autoscaling events
-- Observe HPA behavior and scaling decisions
-- Configure memory-based autoscaling
-- Test autoscaling with different workload patterns
+- Configure liveness, readiness, and startup probes
+- Understand probe types and their use cases
+- Practice troubleshooting application health issues
+- Monitor probe behavior and failure recovery
 
 ## Prerequisites
-- Lab 7 completed (health checks and monitoring)
+- Lab 7 completed (Resource Management)
 - kubectl configured to use your namespace
-- Metrics Server installed in cluster
-- Understanding of resource requests and limits
 
 ## Instructions
 
-### Step 1: Clean Up Previous Resources
-Start with a clean environment:
+### Step 1: Clean Up and Deploy Unhealthy Application
+Start with an application that has health issues:
 
 ```bash
-# Clean up previous lab resources
+# Clean up previous resources
 kubectl delete deployment --all
-kubectl delete svc --all
 kubectl delete pod --all
-kubectl get all
 
-# Verify namespace is clean
-kubectl get pods
+# Deploy application without health checks
+sed 's/userX/user1/g' unhealthy-app.yaml > my-unhealthy-app.yaml
+kubectl apply -f my-unhealthy-app.yaml
+
+# Check application status
+kubectl get pods -l app=unhealthy-app
+kubectl describe pod $(kubectl get pods -l app=unhealthy-app -o jsonpath='{.items[0].metadata.name}')
 ```
 
-### Step 2: Access Kube-ops-view for Visual Monitoring
-Explore the pre-installed cluster visualization tool:
+### Step 2: Add Readiness Probe
+Configure readiness probe to prevent traffic to unready pods:
 
 ```bash
-# Check if kube-ops-view is running
-kubectl get pods -n kube-ops-view
-kubectl get svc -n kube-ops-view
+# Deploy app with readiness probe
+sed 's/userX/user1/g' readiness-app.yaml > my-readiness-app.yaml
+kubectl apply -f my-readiness-app.yaml
 
-# Get the LoadBalancer URL for kube-ops-view
-kubectl get svc -n kube-ops-view kube-ops-view
+# Watch pods become ready
+kubectl get pods -l app=readiness-app -w
+# Press Ctrl+C after pods are ready
 
-# Note: Open the external URL in your browser to visualize the cluster
-# You'll use this throughout the lab to observe scaling behavior
+# Check readiness probe configuration
+kubectl describe pod $(kubectl get pods -l app=readiness-app -o jsonpath='{.items[0].metadata.name}') | grep -A 5 "Readiness"
+
+# Test readiness behavior
+kubectl get pods -l app=readiness-app -o wide
 ```
 
-### Step 3: Deploy Application with Resource Requests
-Deploy an application with defined resource requests (required for HPA):
+### Step 3: Add Liveness Probe
+Configure liveness probe to restart unhealthy containers:
 
 ```bash
-# Deploy CPU-intensive application
-sed 's/userX/user1/g' cpu-app.yaml > my-cpu-app.yaml
-kubectl apply -f my-cpu-app.yaml
+# Deploy app with liveness probe
+sed 's/userX/user1/g' liveness-app.yaml > my-liveness-app.yaml
+kubectl apply -f my-liveness-app.yaml
 
-# Verify deployment and check resource requests
-kubectl get deployment user1-cpu-app
-kubectl describe deployment user1-cpu-app
-kubectl top pods -l app=cpu-app
+# Check liveness probe configuration
+kubectl describe pod $(kubectl get pods -l app=liveness-app -o jsonpath='{.items[0].metadata.name}') | grep -A 5 "Liveness"
+
+# Monitor pod health over time
+kubectl get pods -l app=liveness-app -w
+# Press Ctrl+C after observing for a few minutes
 ```
 
-### Step 4: Create Horizontal Pod Autoscaler (HPA)
-Configure HPA based on CPU utilization:
+### Step 4: Simulate Application Failure
+Test how probes handle application failures:
 
 ```bash
-# Create HPA for CPU-based scaling
-sed 's/userX/user1/g' cpu-hpa.yaml > my-cpu-hpa.yaml
-kubectl apply -f my-cpu-hpa.yaml
+# Create app that will become unhealthy
+sed 's/userX/user1/g' failing-app.yaml > my-failing-app.yaml
+kubectl apply -f my-failing-app.yaml
 
-# Check HPA status
-kubectl get hpa
-kubectl describe hpa user1-cpu-hpa
+# Wait for app to be ready
+kubectl wait --for=condition=Ready pod -l app=failing-app --timeout=60s
 
-# Monitor HPA in real-time
-kubectl get hpa -w &
+# Simulate app failure by creating failure condition
+POD_NAME=$(kubectl get pods -l app=failing-app -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD_NAME -- touch /tmp/unhealthy
 
-# Stop watching after verification
-sleep 30
-kill %1
+# Watch liveness probe detect failure and restart container
+kubectl get pods -l app=failing-app -w
+# Press Ctrl+C after seeing restart
+
+# Check restart count and events
+kubectl describe pod $POD_NAME | grep -E "(Restart Count|Events)" -A 10
 ```
 
-### Step 5: Create Service for Load Testing
-Expose the application for load testing:
+### Step 5: Configure Startup Probe
+Handle slow-starting applications with startup probes:
 
 ```bash
-# Create service for the CPU app
-sed 's/userX/user1/g' cpu-app-service.yaml > my-cpu-app-service.yaml
-kubectl apply -f my-cpu-app-service.yaml
+# Deploy slow-starting app with startup probe
+sed 's/userX/user1/g' startup-app.yaml > my-startup-app.yaml
+kubectl apply -f my-startup-app.yaml
 
-# Verify service
-kubectl get svc user1-cpu-app-service
-kubectl describe svc user1-cpu-app-service
+# Monitor startup process
+kubectl get pods -l app=startup-app -w
+# Press Ctrl+C after pod is ready
+
+# Check probe configurations
+kubectl describe pod $(kubectl get pods -l app=startup-app -o jsonpath='{.items[0].metadata.name}') | grep -A 5 -E "(Startup|Liveness|Readiness)"
+
+# View startup events
+kubectl get events --field-selector involvedObject.name=$(kubectl get pods -l app=startup-app -o jsonpath='{.items[0].metadata.name}')
 ```
 
-### Step 6: Generate CPU Load to Trigger Scaling
-Create load to trigger HPA scaling:
+### Step 6: Different Probe Types
+Test HTTP, TCP, and command-based probes:
 
 ```bash
-# Deploy load generator
-sed 's/userX/user1/g' load-generator-cpu.yaml > my-load-generator-cpu.yaml
-kubectl apply -f my-load-generator-cpu.yaml
+# Deploy app with HTTP probe
+sed 's/userX/user1/g' http-probe-app.yaml > my-http-probe-app.yaml
+kubectl apply -f my-http-probe-app.yaml
 
-# Check load generator is running
-kubectl get pods -l app=load-generator
+# Deploy app with TCP probe
+sed 's/userX/user1/g' tcp-probe-app.yaml > my-tcp-probe-app.yaml
+kubectl apply -f my-tcp-probe-app.yaml
 
-# Start generating load
-kubectl exec user1-load-generator -- sh -c '
-echo "Starting CPU load test..."
-for i in $(seq 1 10); do
-  echo "Load test iteration $i"
-  curl -s http://user1-cpu-app-service/cpu-load &
-done
-wait
-'
+# Deploy app with command probe
+sed 's/userX/user1/g' exec-probe-app.yaml > my-exec-probe-app.yaml
+kubectl apply -f my-exec-probe-app.yaml
 
-# Monitor the scaling in real-time
-kubectl get hpa user1-cpu-hpa -w &
-kubectl get pods -l app=cpu-app -w &
-
-# Let it run for 5 minutes to observe scaling
-sleep 300
-kill %1 %2
+# Check all probe types
+kubectl get pods | grep probe
+kubectl describe pod $(kubectl get pods -l app=http-probe -o jsonpath='{.items[0].metadata.name}') | grep -A 3 "Http Get"
+kubectl describe pod $(kubectl get pods -l app=tcp-probe -o jsonpath='{.items[0].metadata.name}') | grep -A 3 "TCP Socket"
+kubectl describe pod $(kubectl get pods -l app=exec-probe -o jsonpath='{.items[0].metadata.name}') | grep -A 3 "Exec"
 ```
 
-### Step 7: Observe HPA Scaling Behavior
-Monitor and analyze the scaling behavior:
+### Step 7: Service Integration with Readiness
+See how readiness probes affect service traffic:
 
 ```bash
-# Check current HPA status
-kubectl get hpa user1-cpu-hpa
-kubectl describe hpa user1-cpu-hpa
+# Create service for readiness app
+sed 's/userX/user1/g' health-service.yaml > my-health-service.yaml
+kubectl apply -f my-health-service.yaml
 
-# Check current pod count
-kubectl get pods -l app=cpu-app
+# Check service endpoints
+kubectl get endpoints user1-health-service
+kubectl describe endpoints user1-health-service
 
-# View HPA events
-kubectl describe hpa user1-cpu-hpa | grep Events -A 10
+# Scale up readiness app
+kubectl scale deployment user1-readiness-app --replicas=3
+kubectl get pods -l app=readiness-app
 
-# Check pod resource utilization
-kubectl top pods -l app=cpu-app
+# Make one pod unready and check endpoints
+POD_NAME=$(kubectl get pods -l app=readiness-app -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD_NAME -- touch /tmp/not-ready
+
+# Check that unhealthy pod is removed from endpoints
+kubectl get endpoints user1-health-service
+kubectl describe endpoints user1-health-service
 ```
 
-### Step 8: Configure Memory-Based HPA
-Create HPA that scales based on memory usage:
+### Step 8: Probe Troubleshooting
+Practice diagnosing probe failures:
 
 ```bash
-# Deploy memory-intensive application
-sed 's/userX/user1/g' memory-app.yaml > my-memory-app.yaml
-kubectl apply -f my-memory-app.yaml
+# Create deployment with broken probes
+sed 's/userX/user1/g' broken-probe-app.yaml > my-broken-probe-app.yaml
+kubectl apply -f my-broken-probe-app.yaml
 
-# Create memory-based HPA
-sed 's/userX/user1/g' memory-hpa.yaml > my-memory-hpa.yaml
-kubectl apply -f my-memory-hpa.yaml
+# Diagnose probe failures
+kubectl get pods -l app=broken-probe
+kubectl describe pod $(kubectl get pods -l app=broken-probe -o jsonpath='{.items[0].metadata.name}') | grep -A 10 "Events"
 
-# Create service for memory app
-sed 's/userX/user1/g' memory-app-service.yaml > my-memory-app-service.yaml
-kubectl apply -f my-memory-app-service.yaml
+# Check container logs for probe-related errors
+kubectl logs $(kubectl get pods -l app=broken-probe -o jsonpath='{.items[0].metadata.name}')
 
-# Check memory HPA
-kubectl get hpa user1-memory-hpa
-kubectl describe hpa user1-memory-hpa
-```
-
-### Step 9: Test Memory-Based Scaling
-Generate memory load to trigger memory-based scaling:
-
-```bash
-# Generate memory load
-kubectl exec user1-load-generator -- sh -c '
-echo "Starting memory load test..."
-for i in $(seq 1 5); do
-  echo "Memory load test iteration $i"
-  curl -s http://user1-memory-app-service/memory-load &
-done
-wait
-'
-
-# Monitor memory-based scaling
-kubectl get hpa user1-memory-hpa -w &
-kubectl get pods -l app=memory-app -w &
-
-# Monitor for 3 minutes
-sleep 180
-kill %1 %2
-
-# Check memory utilization
-kubectl top pods -l app=memory-app
-```
-
-### Step 10: Configure Multi-Metric HPA
-Create HPA that scales based on multiple metrics:
-
-```bash
-# Deploy application that can stress both CPU and memory
-sed 's/userX/user1/g' multi-metric-app.yaml > my-multi-metric-app.yaml
-kubectl apply -f my-multi-metric-app.yaml
-
-# Create multi-metric HPA
-sed 's/userX/user1/g' multi-metric-hpa.yaml > my-multi-metric-hpa.yaml
-kubectl apply -f my-multi-metric-hpa.yaml
-
-# Create service for multi-metric app
-sed 's/userX/user1/g' multi-metric-service.yaml > my-multi-metric-service.yaml
-kubectl apply -f my-multi-metric-service.yaml
-
-# Check multi-metric HPA
-kubectl get hpa user1-multi-metric-hpa
-kubectl describe hpa user1-multi-metric-hpa
-```
-
-### Step 11: Test Multi-Metric Scaling
-Test scaling behavior with multiple metrics:
-
-```bash
-# Generate mixed load (CPU and memory)
-kubectl exec user1-load-generator -- sh -c '
-echo "Starting mixed load test..."
-for i in $(seq 1 8); do
-  curl -s http://user1-multi-metric-service/cpu-load &
-  curl -s http://user1-multi-metric-service/memory-load &
-done
-wait
-'
-
-# Monitor multi-metric scaling
-kubectl get hpa user1-multi-metric-hpa -w &
-kubectl get pods -l app=multi-metric-app -w &
-
-# Monitor for 4 minutes
-sleep 240
-kill %1 %2
-
-# Check resource utilization
-kubectl top pods -l app=multi-metric-app
-```
-
-### Step 12: Test Scale-Down Behavior
-Observe how HPA scales down after load decreases:
-
-```bash
-# Stop all load generation
-kubectl delete pod user1-load-generator
-
-# Create a new load generator for controlled testing
-kubectl apply -f my-load-generator-cpu.yaml
-
-# Generate moderate load for 2 minutes
-kubectl exec user1-load-generator -- sh -c '
-for i in $(seq 1 4); do
-  curl -s http://user1-cpu-app-service/cpu-load &
-done
-wait
-'
-
-# Wait for scale-up
-sleep 120
-
-# Stop load generation (no more requests)
-echo "Load stopped - observing scale-down behavior"
-
-# Monitor scale-down (takes 5+ minutes by default)
-kubectl get hpa -w &
-kubectl get pods -l app=cpu-app -w &
-
-# Monitor for 8 minutes to see scale-down
-sleep 480
-kill %1 %2
-```
-
-### Step 13: Configure Custom HPA Behavior
-Create HPA with custom scaling behavior:
-
-```bash
-# Deploy app with custom HPA behavior
-sed 's/userX/user1/g' custom-hpa-behavior.yaml > my-custom-hpa-behavior.yaml
-kubectl apply -f my-custom-hpa-behavior.yaml
-
-# Check custom HPA configuration
-kubectl describe hpa user1-custom-behavior-hpa
-
-# Test custom scaling behavior
-kubectl exec user1-load-generator -- sh -c '
-for i in $(seq 1 6); do
-  curl -s http://user1-cpu-app-service/cpu-load &
-done
-wait
-'
-
-# Monitor custom scaling behavior
-kubectl get hpa user1-custom-behavior-hpa -w &
-kubectl get pods -l app=cpu-app -w &
-
-sleep 240
-kill %1 %2
-```
-
-### Step 14: Monitor HPA Metrics and Events
-Analyze HPA metrics and decision-making process:
-
-```bash
-# Get detailed HPA metrics
-kubectl describe hpa user1-cpu-hpa
-kubectl describe hpa user1-memory-hpa
-kubectl describe hpa user1-multi-metric-hpa
-
-# Check HPA events
-kubectl get events --field-selector involvedObject.kind=HorizontalPodAutoscaler
-
-# Get current scaling status
-kubectl get hpa
-kubectl top pods
-
-# Check HPA conditions and status
-kubectl get hpa -o wide
-kubectl get hpa user1-cpu-hpa -o yaml | grep -A 20 status
-```
-
-### Step 15: Test Resource Limit Impact on HPA
-Understand how resource limits affect scaling:
-
-```bash
-# Deploy app with low resource limits
-sed 's/userX/user1/g' limited-resources-app.yaml > my-limited-resources-app.yaml
-kubectl apply -f my-limited-resources-app.yaml
-
-# Create HPA for limited resources app
-sed 's/userX/user1/g' limited-resources-hpa.yaml > my-limited-resources-hpa.yaml
-kubectl apply -f my-limited-resources-hpa.yaml
-
-# Create service
-sed 's/userX/user1/g' limited-resources-service.yaml > my-limited-resources-service.yaml
-kubectl apply -f my-limited-resources-service.yaml
-
-# Generate load and observe behavior with limited resources
-kubectl exec user1-load-generator -- sh -c '
-for i in $(seq 1 8); do
-  curl -s http://user1-limited-service/cpu-load &
-done
-wait
-'
-
-# Monitor resource-limited scaling
-kubectl get hpa user1-limited-hpa -w &
-kubectl top pods -l app=limited-resources --use-protocol-buffers &
-
-sleep 180
-kill %1 %2
+# Fix the probe and redeploy
+kubectl patch deployment user1-broken-probe-app -p '{"spec":{"template":{"spec":{"containers":[{"name":"app","readinessProbe":{"httpGet":{"path":"/","port":80}}}]}}}}'
+kubectl rollout status deployment/user1-broken-probe-app
 ```
 
 ## Verification Steps
 
-### Verify Your Autoscaling Configuration
-Run these commands to verify everything is working:
-
 ```bash
-# 1. Check all HPA configurations
-kubectl get hpa
+# 1. Verify probes are configured
+kubectl get pods -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[0].livenessProbe.httpGet.path}{"\n"}{end}'
 
-# 2. Verify metrics are available
-kubectl top nodes
-kubectl top pods
+# 2. Check readiness probe affects service endpoints
+kubectl get endpoints | grep user1
 
-# 3. Check application resource usage
-kubectl describe deployment user1-cpu-app | grep -A 5 "Limits\|Requests"
+# 3. Verify probe failure recovery
+kubectl describe pod $(kubectl get pods -l app=failing-app -o jsonpath='{.items[0].metadata.name}') | grep "Restart Count"
 
-# 4. Verify HPA is making scaling decisions
-kubectl describe hpa user1-cpu-hpa | tail -20
-
-# 5. Check current pod counts match HPA target
-kubectl get pods -l app=cpu-app --no-headers | wc -l
+# 4. Confirm different probe types work
+kubectl get pods | grep probe | grep Running
 ```
 
-## Clean Up
-Remove all autoscaling resources:
+## Key Takeaways
+- Readiness probes control traffic routing to pods
+- Liveness probes restart unhealthy containers
+- Startup probes protect slow-starting applications
+- Probe types: HTTP, TCP, and exec commands
+- Proper timing prevents false positive failures
+- Service endpoints automatically exclude unready pods
+- Probe failures generate events for troubleshooting
 
+## Cleanup
 ```bash
-# Delete all HPAs
-kubectl delete hpa --all
-
-# Delete all deployments
-kubectl delete deployment --all
-
-# Delete all services
-kubectl delete svc --all
-
-# Delete test pods
-kubectl delete pod --all
+kubectl delete deployment user1-unhealthy-app user1-readiness-app user1-liveness-app user1-failing-app user1-startup-app user1-http-probe-app user1-tcp-probe-app user1-exec-probe-app user1-broken-probe-app
+kubectl delete service user1-health-service
 ```
-
-## Troubleshooting
-
-### Common Issues
-1. **HPA shows "unknown" metrics**: Check if Metrics Server is running
-2. **No scaling occurs**: Verify resource requests are defined
-3. **Scaling too aggressive**: Adjust scale-up/scale-down policies
-4. **Pods stuck pending**: Check cluster resource availability
-
-### Useful Commands
-```bash
-# Debug HPA issues
-kubectl describe hpa <hpa-name>
-kubectl get events --sort-by=.metadata.creationTimestamp
-
-# Check metrics availability
-kubectl get --raw /apis/metrics.k8s.io/v1beta1/nodes
-kubectl get --raw /apis/metrics.k8s.io/v1beta1/pods
-
-# Monitor resource usage
-kubectl top pods --sort-by=cpu
-kubectl top pods --sort-by=memory
-```
-
-## Key Concepts Learned
-- **Horizontal Pod Autoscaler (HPA)**: Automatic scaling based on metrics
-- **CPU-based Scaling**: Scaling based on CPU utilization
-- **Memory-based Scaling**: Scaling based on memory usage
-- **Multi-metric Scaling**: Using multiple metrics for scaling decisions
-- **Scaling Behavior**: Customizing scale-up and scale-down policies
-- **Resource Requirements**: Impact of requests and limits on scaling
-- **Metrics Server**: Source of metrics for HPA decisions
-- **Load Testing**: Generating load to trigger scaling events
-
-## Next Steps
-In the next lab, you'll learn about implementing Role-Based Access Control (RBAC) to secure your applications and control access to Kubernetes resources.
 
 ---
 
-**Remember**: Proper resource requests and limits are essential for effective autoscaling in Kubernetes!
+**Remember**: Always use your assigned username prefix (userX-) for all resources you create!

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-admin
+  labels:
+    app: admin
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin
+  template:
+    metadata:
+      labels:
+        app: admin
+        owner: userX
+    spec:
+      containers:
+      - name: admin
+        image: hashicorp/http-echo:0.2.3
+        args:
+        - "-text=Admin Panel Pod: $(POD_NAME)"
+        - "-listen=:80"
+        ports:
+        - containerPort: 80
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "50m"
+          limits:
+            memory: "64Mi"
+            cpu: "100m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: userX-admin-service
+  labels:
+    app: admin
+    owner: userX
+spec:
+  selector:
+    app: admin
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
