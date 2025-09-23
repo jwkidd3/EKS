@@ -1,4 +1,6 @@
-Select T3.large under additional instance type
+Select m5.large under additional instance type
+
+connection should be ssh
 
 Modify iamrole for instance to Cloud9-EKS-Profile
 Turn off manage temp credentials in CLoud9 Settings
