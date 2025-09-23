@@ -1,327 +1,268 @@
-# Lab 5: Deploying Microservices to EKS
+# Lab 5: ConfigMaps and Secrets
 
 ## Duration: 45 minutes
 
 ## Objectives
-- Deploy NodeJS backend API with database connectivity
-- Deploy Crystal backend API with different configurations
-- Create frontend application connecting to backend services
-- Test end-to-end application functionality
-- Scale individual microservices independently
+- Create ConfigMaps from files and command line
+- Create different types of Secrets
+- Use ConfigMaps and Secrets in pods via environment variables and volume mounts
+- Update configurations and observe rolling updates
+- Practice real-world configuration management scenarios
 
 ## Prerequisites
-- Lab 4 completed (deployments and services)
+- Lab 4 completed (deployments)
 - kubectl configured to use your namespace
 
 ## Instructions
 
-> **📋 MICROSERVICES NAMING CONVENTION:** This lab deploys multiple interconnected services. Each `sed` command customizes service names, deployments, and network connectivity with your username prefix to ensure proper isolation and avoid conflicts with other students in the shared cluster.
-
-### Step 1: Clean Up Previous Resources
+### Step 1: Clean Up and Prepare
 Start with a clean environment:
 
 ```bash
-# Clean up previous lab resources
+# Clean up previous resources
 kubectl delete deployment --all
-kubectl delete svc --all
-kubectl get all
+kubectl delete configmap --all
+kubectl delete secret --all
 
-# Verify namespace is clean
-kubectl get pods
+# Verify clean state
+kubectl get all,configmap,secret
 ```
 
-### Step 2: Deploy Database Layer
-Start by deploying a Redis database for the microservices:
+### Step 2: Create ConfigMap from Command Line
+Create application configuration using kubectl:
 
 ```bash
-# Deploy Redis database with user-specific naming
-# These commands customize ALL resource names with your username:
-# - Deployment: userX-redis → user1-redis
-# - Service: userX-redis-service → user1-redis-service
-# - Labels: owner: userX → owner: user1
-sed 's/userX/user1/g' redis-deployment.yaml > my-redis-deployment.yaml
-sed 's/userX/user1/g' redis-service.yaml > my-redis-service.yaml
+# Create ConfigMap with application settings
+kubectl create configmap user1-app-config \
+  --from-literal=database_url=postgresql://db:5432/myapp \
+  --from-literal=log_level=info \
+  --from-literal=max_connections=100 \
+  --from-literal=debug_mode=false
 
-kubectl apply -f my-redis-deployment.yaml
-kubectl apply -f my-redis-service.yaml
-
-# Verify Redis is running
-kubectl get pods -l app=redis
-kubectl get svc user1-redis-service
+# Verify ConfigMap creation
+kubectl get configmap user1-app-config -o yaml
+kubectl describe configmap user1-app-config
 ```
 
-### Step 3: Deploy NodeJS Backend API
-Deploy the NodeJS backend service:
+### Step 3: Create ConfigMap from File
+Create a configuration file and ConfigMap:
 
 ```bash
-# Deploy NodeJS backend
-sed 's/userX/user1/g' nodejs-backend.yaml > my-nodejs-backend.yaml
-kubectl apply -f my-nodejs-backend.yaml
+# Create application properties file
+cat > app.properties << EOF
+# Application Settings
+app.name=MyKubernetesApp
+app.version=1.0.0
+app.port=8080
+app.environment=production
+
+# Feature Flags
+feature.new_ui=true
+feature.analytics=false
+feature.beta_features=disabled
+
+# Cache Settings
+cache.ttl=3600
+cache.max_size=1000
+EOF
+
+# Create ConfigMap from file
+kubectl create configmap user1-app-props --from-file=app.properties
+
+# View the file-based ConfigMap
+kubectl get configmap user1-app-props -o yaml
+```
+
+### Step 4: Create Generic Secret
+Create secrets for sensitive data:
+
+```bash
+# Create database credentials secret
+kubectl create secret generic user1-db-secret \
+  --from-literal=username=appuser \
+  --from-literal=password=supersecretpassword \
+  --from-literal=root-password=adminpassword123
+
+# Create API keys secret
+kubectl create secret generic user1-api-keys \
+  --from-literal=github_token=ghp_xxxxxxxxxxxxxxxxxxxx \
+  --from-literal=stripe_key=sk_test_xxxxxxxxxxxxxxxxxxxx \
+  --from-literal=jwt_secret=my-super-secret-jwt-key
+
+# Verify secrets (note: data is base64 encoded)
+kubectl get secret user1-db-secret -o yaml
+kubectl describe secret user1-db-secret
+```
+
+### Step 5: Create TLS Secret
+Create a TLS secret for HTTPS:
+
+```bash
+# Generate a self-signed certificate (for demo purposes)
+openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 365 -nodes -subj "/CN=user1-app.example.com"
+
+# Create TLS secret
+kubectl create secret tls user1-tls-secret --cert=tls.crt --key=tls.key
+
+# View TLS secret
+kubectl describe secret user1-tls-secret
+
+# Clean up certificate files
+rm tls.key tls.crt
+```
+
+### Step 6: Deploy Application Using ConfigMaps and Secrets
+Create a deployment that uses both ConfigMaps and Secrets:
+
+```bash
+# Apply the web application deployment
+sed 's/userX/user1/g' web-app-deployment.yaml > my-web-app-deployment.yaml
+kubectl apply -f my-web-app-deployment.yaml
 
 # Check deployment status
-kubectl get deployment user1-nodejs-backend
-kubectl get pods -l app=nodejs-backend
+kubectl get deployment user1-web-app
+kubectl get pods -l app=web-app
 
-# Check logs to ensure it's connecting to Redis
-kubectl logs -l app=nodejs-backend
+# Wait for pods to be ready
+kubectl wait --for=condition=Ready pod -l app=web-app --timeout=60s
 ```
 
-### Step 4: Deploy Crystal Backend API
-Deploy the Crystal backend with different configuration:
+### Step 7: Verify Configuration Loading
+Test that the application loaded the configuration correctly:
 
 ```bash
-# Deploy Crystal backend
-sed 's/userX/user1/g' crystal-backend.yaml > my-crystal-backend.yaml
-kubectl apply -f my-crystal-backend.yaml
+# Get pod name
+POD_NAME=$(kubectl get pods -l app=web-app -o jsonpath='{.items[0].metadata.name}')
 
-# Check deployment status
-kubectl get deployment user1-crystal-backend
-kubectl get pods -l app=crystal-backend
+# Check environment variables from ConfigMap
+kubectl exec $POD_NAME -- env | grep -E "(DATABASE_URL|LOG_LEVEL|MAX_CONNECTIONS|DEBUG_MODE)"
 
-# Verify both backends are running
-kubectl get deployments
+# Check environment variables from Secret
+kubectl exec $POD_NAME -- env | grep -E "(DB_USERNAME|DB_PASSWORD)"
+
+# Check mounted configuration file
+kubectl exec $POD_NAME -- cat /etc/config/app.properties
+
+# Check mounted secrets
+kubectl exec $POD_NAME -- ls -la /etc/secrets/
+kubectl exec $POD_NAME -- cat /etc/secrets/github_token
 ```
 
-### Step 5: Create ConfigMap for Frontend
-Create configuration for the frontend application:
+### Step 8: Update Configuration and Observe Rolling Update
+Modify configuration and watch Kubernetes update the application:
 
 ```bash
-# Create ConfigMap for frontend configuration
-sed 's/userX/user1/g' frontend-config.yaml > my-frontend-config.yaml
-kubectl apply -f my-frontend-config.yaml
+# Update the ConfigMap with new values
+kubectl patch configmap user1-app-config --patch '{"data":{"log_level":"debug","debug_mode":"true","max_connections":"200"}}'
 
-# Verify ConfigMap
-kubectl get configmap user1-frontend-config
-kubectl describe configmap user1-frontend-config
+# Update the properties file ConfigMap
+cat > new-app.properties << EOF
+# Application Settings
+app.name=MyKubernetesApp
+app.version=2.0.0
+app.port=8080
+app.environment=production
+
+# Feature Flags
+feature.new_ui=true
+feature.analytics=true
+feature.beta_features=enabled
+
+# Cache Settings
+cache.ttl=7200
+cache.max_size=2000
+EOF
+
+kubectl create configmap user1-app-props --from-file=app.properties=new-app.properties --dry-run=client -o yaml | kubectl replace -f -
+
+# Trigger rolling update by updating deployment annotation
+kubectl patch deployment user1-web-app -p '{"spec":{"template":{"metadata":{"annotations":{"configUpdate":"'$(date)'"}}}}}'
+
+# Watch the rolling update
+kubectl rollout status deployment/user1-web-app
+
+# Verify new configuration is loaded
+POD_NAME=$(kubectl get pods -l app=web-app -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD_NAME -- env | grep -E "(LOG_LEVEL|DEBUG_MODE|MAX_CONNECTIONS)"
+kubectl exec $POD_NAME -- grep "app.version" /etc/config/app.properties
 ```
 
-### Step 6: Deploy Frontend Application
-Deploy the frontend that connects to both backends:
+### Step 9: ConfigMap and Secret Management
+Practice common management tasks:
 
 ```bash
-# Deploy frontend application
-sed 's/userX/user1/g' frontend-deployment.yaml > my-frontend-deployment.yaml
-kubectl apply -f my-frontend-deployment.yaml
+# View all ConfigMaps and Secrets
+kubectl get configmap,secret
 
-# Check frontend deployment
-kubectl get deployment user1-frontend
-kubectl get pods -l app=frontend
+# Edit a ConfigMap directly
+kubectl edit configmap user1-app-config
 
-# Check frontend logs
-kubectl logs -l app=frontend
+# Create a ConfigMap from multiple files
+mkdir config-files
+echo "upstream backend { server backend1:8080; server backend2:8080; }" > config-files/nginx.conf
+echo "worker_processes auto;" > config-files/nginx-main.conf
+kubectl create configmap user1-nginx-config --from-file=config-files/
+
+# View the multi-file ConfigMap
+kubectl describe configmap user1-nginx-config
+
+# Clean up
+rm -rf config-files new-app.properties app.properties
 ```
 
-### Step 7: Create Services for All Components
-Create services to expose each component:
+### Step 10: Troubleshooting Configuration Issues
+Practice common troubleshooting scenarios:
 
 ```bash
-# Create NodeJS backend service
-sed 's/userX/user1/g' nodejs-service.yaml > my-nodejs-service.yaml
-kubectl apply -f my-nodejs-service.yaml
+# Check if pod is getting the right configuration
+kubectl describe pod $POD_NAME | grep -A 10 -B 5 -E "(Environment|Mounts)"
 
-# Create Crystal backend service
-sed 's/userX/user1/g' crystal-service.yaml > my-crystal-service.yaml
-kubectl apply -f my-crystal-service.yaml
+# Check for configuration-related events
+kubectl get events --field-selector involvedObject.name=$POD_NAME
 
-# Create frontend service (LoadBalancer)
-sed 's/userX/user1/g' frontend-service.yaml > my-frontend-service.yaml
-kubectl apply -f my-frontend-service.yaml
+# Verify ConfigMap and Secret references in deployment
+kubectl describe deployment user1-web-app | grep -A 5 -B 5 -E "(ConfigMap|Secret)"
 
-# Check all services
-kubectl get svc
-```
-
-### Step 8: Test Service Connectivity
-Test connectivity between services:
-
-```bash
-# Create a test pod for internal testing
-sed 's/userX/user1/g' test-connectivity.yaml > my-test-connectivity.yaml
-kubectl apply -f my-test-connectivity.yaml
-
-# Test Redis connectivity
-kubectl exec user1-connectivity-test -- redis-cli -h user1-redis-service ping
-
-# Test NodeJS backend
-kubectl exec user1-connectivity-test -- curl -s http://user1-nodejs-service:3000/health
-
-# Test Crystal backend
-kubectl exec user1-connectivity-test -- curl -s http://user1-crystal-service:3000/health
-
-# Test frontend
-kubectl exec user1-connectivity-test -- curl -s http://user1-frontend-service:80/
-```
-
-### Step 9: Test End-to-End Functionality
-Test the complete application flow:
-
-```bash
-# Test data flow through NodeJS backend
-kubectl exec user1-connectivity-test -- curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"key":"test","value":"hello"}' \
-  http://user1-nodejs-service:3000/data
-
-# Retrieve data through NodeJS
-kubectl exec user1-connectivity-test -- curl -s http://user1-nodejs-service:3000/data/test
-
-# Test Crystal backend functionality
-kubectl exec user1-connectivity-test -- curl -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"message":"crystal test"}' \
-  http://user1-crystal-service:3000/process
-
-# Check external access if LoadBalancer has external IP
-kubectl get svc user1-frontend-service
-```
-
-### Step 10: Scale Individual Microservices
-Practice independent scaling of each service:
-
-```bash
-# Scale NodeJS backend (high load service)
-kubectl scale deployment user1-nodejs-backend --replicas=3
-kubectl get pods -l app=nodejs-backend
-
-# Scale Crystal backend (moderate load)
-kubectl scale deployment user1-crystal-backend --replicas=2
-kubectl get pods -l app=crystal-backend
-
-# Scale frontend (user-facing)
-kubectl scale deployment user1-frontend --replicas=4
-kubectl get pods -l app=frontend
-
-# Keep Redis as single instance (stateful)
-kubectl get pods -l app=redis
-
-# Check overall resource usage
-kubectl top pods
-```
-
-### Step 11: Monitor Service Discovery
-Verify service discovery is working correctly:
-
-```bash
-# Check DNS resolution between services
-kubectl exec user1-connectivity-test -- nslookup user1-nodejs-service
-kubectl exec user1-connectivity-test -- nslookup user1-crystal-service
-kubectl exec user1-connectivity-test -- nslookup user1-redis-service
-
-# Test service discovery from NodeJS pod
-NODEJS_POD=$(kubectl get pods -l app=nodejs-backend -o jsonpath='{.items[0].metadata.name}')
-kubectl exec $NODEJS_POD -- nslookup user1-redis-service
-
-# Test from Crystal pod
-CRYSTAL_POD=$(kubectl get pods -l app=crystal-backend -o jsonpath='{.items[0].metadata.name}')
-kubectl exec $CRYSTAL_POD -- nslookup user1-redis-service
-```
-
-### Step 12: Load Testing and Monitoring
-Generate load and monitor the microservices:
-
-```bash
-# Generate load on NodeJS backend
-kubectl exec user1-connectivity-test -- sh -c '
-for i in $(seq 1 20); do
-  curl -X POST -H "Content-Type: application/json" \
-    -d "{\"key\":\"load-test-$i\",\"value\":\"test-data-$i\"}" \
-    http://user1-nodejs-service:3000/data
-  sleep 1
-done'
-
-# Check pod resource usage
-kubectl top pods
-
-# Check deployment status
-kubectl get deployments
-kubectl describe deployment user1-nodejs-backend
-```
-
-### Step 13: Application Health Monitoring
-Monitor the health of all services:
-
-```bash
-# Check health endpoints
-kubectl exec user1-connectivity-test -- curl -s http://user1-nodejs-service:3000/health
-kubectl exec user1-connectivity-test -- curl -s http://user1-crystal-service:3000/health
-
-# Check pod readiness
-kubectl get pods
-kubectl describe pod $NODEJS_POD | grep -A 5 "Conditions"
-
-# Check service endpoints
-kubectl get endpoints
-kubectl describe endpoints user1-nodejs-service
+# Test configuration changes without restarting pods (for volume mounts)
+kubectl exec $POD_NAME -- ls -la /etc/config/
+kubectl exec $POD_NAME -- watch -n 1 cat /etc/config/app.properties
 ```
 
 ## Verification Steps
 
-### Verify Your Microservices Deployment
-Run these commands to verify everything is working:
+Run these commands to verify your setup:
 
 ```bash
-# 1. Check all deployments are running
-kubectl get deployments
+# 1. Verify ConfigMaps exist and have correct data
+kubectl get configmap user1-app-config user1-app-props -o name
 
-# 2. Verify all pods are ready
-kubectl get pods
+# 2. Verify Secrets exist
+kubectl get secret user1-db-secret user1-api-keys user1-tls-secret -o name
 
-# 3. Check all services
-kubectl get svc
+# 3. Verify deployment is using configurations
+kubectl get deployment user1-web-app -o yaml | grep -E "(configMap|secret)"
 
-# 4. Test connectivity
-kubectl exec user1-connectivity-test -- curl -s http://user1-frontend-service:80/
-
-# 5. Verify scaling
-kubectl get pods -l app=nodejs-backend --no-headers | wc -l
+# 4. Check pod is running with configurations
+kubectl get pods -l app=web-app
+POD_NAME=$(kubectl get pods -l app=web-app -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $POD_NAME -- env | grep -c -E "(DATABASE_URL|DB_USERNAME)" || echo "Environment variables not found"
 ```
 
-## Clean Up (Optional)
-Remove microservices if needed:
+## Key Takeaways
+- ConfigMaps store non-sensitive configuration data
+- Secrets store sensitive data and are base64 encoded
+- Both can be used as environment variables or mounted as files
+- Updating ConfigMaps requires pod restart unless mounted as volumes
+- TLS secrets have specific format requirements
+- Always verify configuration is loaded correctly in your applications
 
+## Cleanup
 ```bash
-# Delete all deployments
-kubectl delete deployment --all
-
-# Delete all services
-kubectl delete svc --all
-
-# Delete ConfigMaps
-kubectl delete configmap --all
+kubectl delete deployment user1-web-app
+kubectl delete configmap user1-app-config user1-app-props user1-nginx-config
+kubectl delete secret user1-db-secret user1-api-keys user1-tls-secret
 ```
-
-## Troubleshooting
-
-### Common Issues
-1. **Service connectivity fails**: Check service selectors and pod labels
-2. **Pods crash on startup**: Check environment variables and dependencies
-3. **Database connection issues**: Verify Redis is running and accessible
-4. **Load balancer pending**: Wait for AWS to provision the load balancer
-
-### Useful Commands
-```bash
-# Debug connectivity
-kubectl exec <test-pod> -- telnet <service-name> <port>
-kubectl describe svc <service-name>
-kubectl get endpoints <service-name>
-
-# Check logs
-kubectl logs -l app=<app-name>
-kubectl logs -f deployment/<deployment-name>
-```
-
-## Key Concepts Learned
-- **Microservices Architecture**: Deploying multiple interconnected services
-- **Service Communication**: How services discover and communicate with each other
-- **Database Integration**: Connecting applications to data stores
-- **Independent Scaling**: Scaling different services based on their load
-- **Configuration Management**: Using ConfigMaps for application configuration
-- **End-to-End Testing**: Verifying complete application functionality
-- **Load Distribution**: Managing traffic across service replicas
-
-## Next Steps
-In the next lab, you'll learn how to use Helm to package and deploy these microservices more efficiently.
 
 ---
 
-**Remember**: Monitor resource usage and scale services based on their specific requirements!
+**Remember**: Always use your assigned username prefix (userX-) for all resources you create!

@@ -9,7 +9,7 @@ metadata:
 spec:
   containers:
   - name: test-container
-    image: busybox:1.35
+    image: nicolaka/netshoot:latest
     command: ['sh', '-c', 'while true; do sleep 30; done']
     resources:
       requests:
