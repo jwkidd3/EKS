@@ -1,28 +1,28 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: userX-load-test
+  name: userX-parallel-job
   labels:
-    app: load-test
+    app: parallel-job
     owner: userX
 spec:
+  parallelism: 3
+  completions: 6
   template:
     spec:
       restartPolicy: Never
       containers:
-      - name: load-test
+      - name: worker
         image: busybox:1.35
         command:
         - /bin/sh
         - -c
         - |
-          echo "Starting load test against userX-frontend-service..."
-          for i in $(seq 1 100); do
-            echo "Request $i:"
-            wget -qO- userX-frontend-service/ || echo "Failed"
-            sleep 0.1
-          done
-          echo "Load test completed"
+          echo "Worker pod $(hostname) starting..."
+          WORKER_ID=$(echo $(hostname) | grep -o '[0-9]*$')
+          echo "Processing batch $WORKER_ID..."
+          sleep 15
+          echo "Worker $WORKER_ID completed successfully!"
         resources:
           requests:
             memory: "32Mi"

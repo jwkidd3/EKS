@@ -1,15 +1,14 @@
-# Lab 13: Troubleshooting and Advanced Deployment Patterns
+# Lab 13: Monitoring and Troubleshooting
 
 ## Duration: 45 minutes
 
 ## Objectives
-- Use kubectl for advanced debugging techniques
-- Analyze Pod, Service, and Ingress logs
+- Use kubectl for debugging and troubleshooting techniques
+- Analyze pod, service, and application logs
 - Monitor resource usage and performance metrics
-- Implement blue-green deployments
-- Practice canary deployments with traffic splitting
-- Configure resource limits and requests
-- Clean up resources and optimize namespace usage
+- Practice common troubleshooting scenarios
+- Debug network connectivity issues
+- Optimize resource usage and cleanup
 
 ## Prerequisites
 - All previous labs completed
@@ -18,241 +17,250 @@
 
 ## Instructions
 
-> **🔧 ADVANCED DEPLOYMENTS & TROUBLESHOOTING:** This lab tests multiple deployment patterns and troubleshooting scenarios. All resources use your username prefix to isolate testing environments and prevent interference with other students' blue-green and canary deployments.
-
-### Step 1: Set Up Problematic Applications
-Deploy applications with intentional issues:
+### Step 1: Deploy Applications for Troubleshooting
+Set up applications with common issues:
 
 ```bash
-# Clean previous resources
-kubectl delete all --all
+# Clean up previous resources
+kubectl delete deployment --all
+kubectl delete service --all
+kubectl delete pod --all
 
-# Deploy app with resource issues
+# Deploy application with resource issues
 sed 's/userX/user1/g' problematic-app.yaml > my-problematic-app.yaml
 kubectl apply -f my-problematic-app.yaml
 
-# Deploy app with configuration issues
+# Deploy application with configuration problems
 sed 's/userX/user1/g' broken-config-app.yaml > my-broken-config-app.yaml
 kubectl apply -f my-broken-config-app.yaml
+
+# Check initial status
+kubectl get pods -l owner=user1
+kubectl get events --sort-by=.metadata.creationTimestamp
 ```
 
-### Step 2: Practice Advanced Debugging
-Use various debugging techniques:
+### Step 2: Basic Troubleshooting Techniques
+Practice fundamental debugging commands:
 
 ```bash
-# Check overall cluster health
+# Check cluster health
 kubectl get nodes
 kubectl get pods --all-namespaces | grep -v Running
 
-# Debug pod issues
+# Examine problematic pods
+kubectl get pods -l app=problematic
 kubectl describe pod $(kubectl get pods -l app=problematic -o jsonpath='{.items[0].metadata.name}')
+kubectl logs $(kubectl get pods -l app=problematic -o jsonpath='{.items[0].metadata.name}')
+
+# Check for previous container crashes
 kubectl logs $(kubectl get pods -l app=problematic -o jsonpath='{.items[0].metadata.name}') --previous
 
-# Check events
-kubectl get events --sort-by=.metadata.creationTimestamp
+# Review cluster events
 kubectl get events --field-selector involvedObject.kind=Pod
-
-# Resource usage debugging
-kubectl top pods
-kubectl describe node $(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+kubectl get events --field-selector type=Warning
 ```
 
-### Step 3: Implement Blue-Green Deployment
-Practice zero-downtime deployment patterns:
+### Step 3: Resource Usage Analysis
+Monitor and analyze resource consumption:
 
 ```bash
-# Deploy blue version
-sed 's/userX/user1/g' blue-green-blue.yaml > my-blue-green-blue.yaml
-kubectl apply -f my-blue-green-blue.yaml
-
-# Create service pointing to blue
-sed 's/userX/user1/g' blue-green-service.yaml > my-blue-green-service.yaml
-kubectl apply -f my-blue-green-service.yaml
-
-# Test blue version
-kubectl exec deployment/user1-blue-app -- curl -s http://user1-blue-green-service/version
-
-# Deploy green version
-sed 's/userX/user1/g' blue-green-green.yaml > my-blue-green-green.yaml
-kubectl apply -f my-blue-green-green.yaml
-
-# Switch traffic to green
-kubectl patch service user1-blue-green-service -p '{"spec":{"selector":{"version":"green"}}}'
-
-# Verify switch
-kubectl exec deployment/user1-green-app -- curl -s http://user1-blue-green-service/version
-```
-
-### Step 4: Implement Canary Deployment
-Practice gradual rollouts:
-
-```bash
-# Deploy stable version
-sed 's/userX/user1/g' canary-stable.yaml > my-canary-stable.yaml
-kubectl apply -f my-canary-stable.yaml
-
-# Deploy canary version (10% traffic)
-sed 's/userX/user1/g' canary-version.yaml > my-canary-version.yaml
-kubectl apply -f my-canary-version.yaml
-
-# Create service for canary testing
-sed 's/userX/user1/g' canary-service.yaml > my-canary-service.yaml
-kubectl apply -f my-canary-service.yaml
-
-# Test traffic distribution
-for i in {1..20}; do
-  kubectl exec deployment/user1-canary-stable -- curl -s http://user1-canary-service/version
-done
-```
-
-### Step 5: Monitor and Optimize Resources
-Analyze resource usage and optimize:
-
-```bash
-# Check resource utilization
+# Check current resource usage
+kubectl top nodes
 kubectl top pods --sort-by=cpu
 kubectl top pods --sort-by=memory
 
-# Analyze resource requests vs usage
+# Examine node resource allocation
 kubectl describe nodes | grep -A 5 "Allocated resources"
 
-# Deploy resource-optimized application
-sed 's/userX/user1/g' optimized-app.yaml > my-optimized-app.yaml
-kubectl apply -f my-optimized-app.yaml
-```
-
-### Step 6: Implement Proper Resource Limits
-Configure appropriate resource constraints:
-
-```bash
-# Deploy app with proper resource limits
+# Deploy resource-monitoring application
 sed 's/userX/user1/g' resource-limited-app.yaml > my-resource-limited-app.yaml
 kubectl apply -f my-resource-limited-app.yaml
 
-# Create resource quota for namespace
-sed 's/userX/user1/g' namespace-quota.yaml > my-namespace-quota.yaml
-kubectl apply -f my-namespace-quota.yaml
-
-# Verify quota enforcement
-kubectl describe quota user1-resource-quota
+# Monitor resource usage over time
+kubectl top pods -l owner=user1
 ```
 
-### Step 7: Advanced Troubleshooting Scenarios
-Practice complex debugging:
+### Step 4: Network Connectivity Troubleshooting
+Debug common network issues:
 
 ```bash
-# Network connectivity issues
-kubectl exec deployment/user1-canary-stable -- nslookup user1-canary-service
-kubectl exec deployment/user1-canary-stable -- curl -v http://user1-canary-service
-
-# Performance troubleshooting
-kubectl exec deployment/user1-optimized-app -- top -n 1
-kubectl exec deployment/user1-optimized-app -- free -h
-
-# Storage issues
-kubectl get pv
-kubectl get pvc
-kubectl describe pvc $(kubectl get pvc -o jsonpath='{.items[0].metadata.name}')
-```
-
-### Step 8: Log Analysis and Monitoring
-Implement comprehensive logging:
-
-```bash
-# Aggregate logs from multiple pods
-kubectl logs -l app=canary-stable --tail=50
-
-# Stream logs in real-time
-kubectl logs -f deployment/user1-canary-stable &
-
-# Export logs for analysis
-kubectl logs deployment/user1-optimized-app > user1-app-logs.txt
-
-# Stop log streaming
-kill %1
-```
-
-### Step 9: Performance Optimization
-Optimize application performance:
-
-```bash
-# Deploy performance-tuned application
+# Deploy test applications with services
 sed 's/userX/user1/g' performance-app.yaml > my-performance-app.yaml
 kubectl apply -f my-performance-app.yaml
 
-# Load test the application
+# Create debug pod for network testing
+kubectl run user1-debug --image=nicolaka/netshoot --command -- sleep 3600
+
+# Test DNS resolution
+kubectl exec user1-debug -- nslookup kubernetes.default
+kubectl exec user1-debug -- nslookup user1-performance-service
+
+# Test service connectivity
+kubectl exec user1-debug -- nc -zv user1-performance-service 80
+kubectl exec user1-debug -- curl -I user1-performance-service
+
+# Check service endpoints
+kubectl get endpoints user1-performance-service
+kubectl describe endpoints user1-performance-service
+```
+
+### Step 5: Application Performance Debugging
+Analyze application performance issues:
+
+```bash
+# Generate load for testing
 sed 's/userX/user1/g' load-test.yaml > my-load-test.yaml
 kubectl apply -f my-load-test.yaml
 
-# Monitor during load test
-kubectl top pods -l app=performance
+# Monitor performance during load
+kubectl top pods -l app=performance --watch
+# Press Ctrl+C after observing metrics
+
+# Check application logs under load
+kubectl logs -l app=performance --tail=50
+kubectl logs -f deployment/user1-performance-app &
+
+# Stop log streaming
+kill %1
+
+# Examine application internals
+kubectl exec deployment/user1-performance-app -- ps aux
+kubectl exec deployment/user1-performance-app -- free -h
 ```
 
-### Step 10: Final Cleanup and Optimization
-Clean up and optimize namespace usage:
+### Step 6: Storage and Configuration Issues
+Debug persistent volume and configuration problems:
 
 ```bash
-# List all resources in namespace
-kubectl get all
+# Check persistent volume claims
 kubectl get pvc
-kubectl get secrets
+kubectl describe pvc $(kubectl get pvc -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "no-pvc")
+
+# Examine ConfigMaps and Secrets
 kubectl get configmaps
+kubectl get secrets
+kubectl describe configmap $(kubectl get cm -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || echo "no-cm")
 
-# Selective cleanup of unused resources
-kubectl delete deployment $(kubectl get deployments -o jsonpath='{.items[?(@.status.replicas==0)].metadata.name}')
-
-# Final resource usage check
-kubectl describe namespace user1-namespace
-kubectl top pods
+# Test configuration loading
+kubectl get pods -l app=broken-config
+kubectl logs -l app=broken-config
 ```
 
-## Verification Steps
-Run comprehensive verification:
+### Step 7: Resource Quota and Limits Troubleshooting
+Debug resource constraint issues:
 
 ```bash
-# 1. Check all deployments are healthy
-kubectl get deployments -o wide
+# Create resource quota for testing
+sed 's/userX/user1/g' namespace-quota.yaml > my-namespace-quota.yaml
+kubectl apply -f my-namespace-quota.yaml
 
-# 2. Verify services are working
-kubectl get svc
-kubectl get endpoints
+# Check current resource usage against quotas
+kubectl describe quota user1-resource-quota
+kubectl describe limitranges
 
-# 3. Test application connectivity
-kubectl exec deployment/user1-performance-app -- curl -s http://user1-canary-service/health
+# Attempt to deploy resource-intensive application
+sed 's/userX/user1/g' optimized-app.yaml > my-optimized-app.yaml
+kubectl apply -f my-optimized-app.yaml
 
-# 4. Check resource utilization
-kubectl top pods --sort-by=cpu
-
-# 5. Verify no failed pods
-kubectl get pods | grep -v Running || echo "All pods running successfully"
+# Debug quota violations
+kubectl get events | grep quota
+kubectl describe pod $(kubectl get pods -l app=optimized -o jsonpath='{.items[0].metadata.name}')
 ```
 
-## Key Concepts Learned
-- **Advanced Debugging**: Using kubectl for complex troubleshooting
-- **Blue-Green Deployments**: Zero-downtime deployment strategy
-- **Canary Deployments**: Gradual rollout with traffic splitting
-- **Resource Optimization**: Right-sizing applications
-- **Performance Monitoring**: Analyzing and improving performance
-- **Log Management**: Collecting and analyzing application logs
-- **Namespace Management**: Organizing and cleaning up resources
-
-## Final Cleanup
-Complete cleanup of all lab resources:
+### Step 8: Log Analysis and Event Monitoring
+Practice comprehensive log analysis:
 
 ```bash
-# Delete all resources in namespace
-kubectl delete all --all
-kubectl delete pvc --all
-kubectl delete secrets --all --field-selector type!=kubernetes.io/service-account-token
-kubectl delete configmaps --all
-kubectl delete networkpolicies --all
-kubectl delete roles --all
-kubectl delete rolebindings --all
-kubectl delete serviceaccounts --all --field-selector metadata.name!=default
+# Aggregate logs from application pods
+kubectl logs -l owner=user1 --tail=50
+
+# Stream logs in real-time
+kubectl logs -f deployment/user1-performance-app &
+
+# Export logs for analysis
+kubectl logs deployment/user1-performance-app > user1-performance-logs.txt
+
+# Stop log streaming
+kill %1
+
+# Analyze events by type
+kubectl get events --field-selector type=Warning
+kubectl get events --field-selector type=Normal --sort-by=.metadata.creationTimestamp
+```
+
+### Step 9: Troubleshooting Summary and Best Practices
+Review troubleshooting techniques:
+
+```bash
+# Check overall namespace health
+kubectl get all -l owner=user1
+kubectl top pods -l owner=user1
+
+# Review resource consumption patterns
+kubectl describe quota user1-resource-quota
+kubectl top nodes
+
+# Clean up debug resources
+kubectl delete pod user1-debug
+kubectl delete job user1-load-test
+
+# Verify cleanup
+kubectl get pods -l owner=user1
+```
+
+### Step 10: Final Cleanup and Documentation
+Document findings and clean up:
+
+```bash
+# Document current resource usage
+kubectl get all > user1-resource-summary.txt
+kubectl top pods >> user1-resource-summary.txt
+
+# Clean up test applications
+kubectl delete deployment user1-problematic-app user1-broken-config-app user1-performance-app
+kubectl delete quota user1-resource-quota
 
 # Verify namespace is clean
 kubectl get all
-echo "Lab environment cleaned successfully!"
+echo "Troubleshooting lab completed successfully!"
+```
+
+## Verification Steps
+
+```bash
+# 1. Check troubleshooting skills were practiced
+kubectl get events --sort-by=.metadata.creationTimestamp | head -10
+
+# 2. Verify resource monitoring works
+kubectl top nodes
+kubectl top pods
+
+# 3. Confirm debugging commands work
+kubectl logs --help | head -5
+kubectl describe --help | head -5
+
+# 4. Test network troubleshooting knowledge
+kubectl run test-debug --image=nicolaka/netshoot --rm -it --command -- nslookup kubernetes.default
+
+# 5. Verify cleanup was successful
+kubectl get all -l owner=user1
+```
+
+## Key Takeaways
+- kubectl describe and logs are essential for debugging
+- Events provide valuable troubleshooting information
+- Resource monitoring helps identify performance issues
+- Network connectivity problems can be debugged systematically
+- Proper resource limits prevent application issues
+- Regular cleanup keeps namespaces organized
+- Troubleshooting is a systematic process of elimination
+
+## Cleanup
+```bash
+kubectl delete deployment user1-problematic-app user1-broken-config-app user1-performance-app user1-resource-limited-app user1-optimized-app
+kubectl delete quota user1-resource-quota
+kubectl delete pod user1-debug --ignore-not-found=true
+kubectl delete job user1-load-test --ignore-not-found=true
 ```
 
 ## Course Summary
@@ -270,10 +278,10 @@ Congratulations! You have completed all 13 labs covering:
 10. **Network Policies and Security** - Traffic control and isolation
 11. **StatefulSets and Headless Services** - Stateful application management
 12. **Ingress and Load Balancing** - HTTP/HTTPS traffic routing
-13. **Monitoring and Troubleshooting** - Advanced debugging and deployment patterns
+13. **Monitoring and Troubleshooting** - Debugging and operational practices
 
 You now have hands-on experience with essential EKS and Kubernetes concepts!
 
 ---
 
-**Remember**: Practice these concepts in real-world scenarios to master EKS!
+**Remember**: Always use your assigned username prefix (userX-) for all resources you create!

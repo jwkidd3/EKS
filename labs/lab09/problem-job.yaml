@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-problem-job
+  labels:
+    app: problem-job
+    owner: userX
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: worker
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Problematic job starting..."
+          echo "Attempting to connect to non-existent service..."
+          # This will fail for troubleshooting practice
+          nc -zv nonexistent-service 80 || echo "Connection failed as expected"
+          echo "Job intentionally failed for troubleshooting practice"
+          exit 1
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"

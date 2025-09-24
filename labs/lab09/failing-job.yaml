@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-failing-job
+  labels:
+    app: failing-job
+    owner: userX
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: worker
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Job attempt starting..."
+          # Simulate random failure for first few attempts
+          RANDOM_NUM=$(( $(date +%s) % 4 ))
+          if [ $RANDOM_NUM -lt 2 ]; then
+            echo "Simulating failure condition..."
+            echo "ERROR: Processing failed!"
+            exit 1
+          else
+            echo "Job completed successfully on retry!"
+            echo "Results: Data processed successfully"
+          fi
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"

@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-exec-probe-app
+  labels:
+    app: exec-probe
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: exec-probe
+  template:
+    metadata:
+      labels:
+        app: exec-probe
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nicolaka/netshoot:latest
+        command: ['sh', '-c', 'while true; do sleep 30; done']
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "echo 'Health check passed'"
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"

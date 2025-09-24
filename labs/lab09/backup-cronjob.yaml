@@ -1,0 +1,40 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: userX-backup-cronjob
+  labels:
+    app: backup-task
+    owner: userX
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: backup
+            image: busybox:1.35
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Backup job started at $(date)"
+              echo "Creating backup for userX data..."
+              echo "Backing up databases..."
+              sleep 20
+              echo "Backing up file storage..."
+              sleep 15
+              echo "Verifying backup integrity..."
+              sleep 10
+              echo "Backup completed successfully at $(date)"
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "200m"
+              limits:
+                memory: "128Mi"
+                cpu: "400m"

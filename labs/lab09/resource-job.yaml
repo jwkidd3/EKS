@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-resource-job
+  labels:
+    app: resource-job
+    owner: userX
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: worker
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Resource-intensive job starting..."
+          echo "Available memory: $(free -m)"
+          echo "CPU info: $(nproc) cores"
+          echo "Performing CPU-intensive task..."
+          # Simulate some work
+          for i in $(seq 1 50); do
+            echo "Processing batch $i of 50..."
+            sleep 1
+          done
+          echo "Job completed successfully!"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"

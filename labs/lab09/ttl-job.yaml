@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: userX-ttl-job
+  labels:
+    app: ttl-job
+    owner: userX
+spec:
+  ttlSecondsAfterFinished: 100  # Job will be deleted 100 seconds after completion
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: worker
+        image: busybox:1.35
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "TTL job starting..."
+          echo "This job will auto-delete after completion"
+          echo "Processing temporary data..."
+          sleep 10
+          echo "Cleaning up temporary files..."
+          sleep 5
+          echo "TTL job completed - will auto-delete in 100 seconds!"
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "100m"
+          limits:
+            memory: "64Mi"
+            cpu: "200m"

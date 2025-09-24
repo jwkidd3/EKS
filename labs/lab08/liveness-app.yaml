@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-liveness-app
+  labels:
+    app: liveness-app
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: liveness-app
+  template:
+    metadata:
+      labels:
+        app: liveness-app
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nginx:1.21-alpine
+        ports:
+        - containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"

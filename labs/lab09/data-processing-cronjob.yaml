@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: userX-data-processing-cronjob
+  labels:
+    app: data-processing
+    owner: userX
+spec:
+  schedule: "0 */6 * * *"  # Every 6 hours
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: processor
+            image: busybox:1.35
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Data processing job started at $(date)"
+              echo "Processing user data for userX..."
+              echo "Reading input files..."
+              sleep 10
+              echo "Transforming data..."
+              sleep 10
+              echo "Writing output files..."
+              sleep 5
+              echo "Data processing completed successfully!"
+            resources:
+              requests:
+                memory: "64Mi"
+                cpu: "200m"
+              limits:
+                memory: "128Mi"
+                cpu: "400m"

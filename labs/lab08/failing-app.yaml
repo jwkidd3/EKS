@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: userX-failing-app
+  labels:
+    app: failing-app
+    owner: userX
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: failing-app
+  template:
+    metadata:
+      labels:
+        app: failing-app
+        owner: userX
+    spec:
+      containers:
+      - name: app
+        image: nicolaka/netshoot:latest
+        command: ['sh', '-c', 'while true; do if [ -f /tmp/unhealthy ]; then exit 1; else sleep 30; fi; done']
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "[ ! -f /tmp/unhealthy ]"
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - "[ ! -f /tmp/not-ready ]"
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "100m"
+          limits:
+            memory: "128Mi"
+            cpu: "250m"
