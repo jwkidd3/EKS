@@ -64,13 +64,16 @@
             <section>
                 <h2>Day 2 Agenda</h2>
                 <ul>
+                    <li><strong>Module 2:</strong> Microservices and Application Management</li>
+                    <li><strong>Hands-On:</strong> Deploying Microservices to EKS</li>
+                    <li><strong>Hands-On:</strong> Application Deployment with Helm</li>
                     <li><strong>Lab 5:</strong> ConfigMaps and Secrets</li>
                     <li><strong>Lab 6:</strong> Persistent Volumes and Storage</li>
                     <li><strong>Lab 7:</strong> Resource Management and Autoscaling</li>
                     <li><strong>Lab 8:</strong> Health Checks and Probes</li>
                 </ul>
                 <div class="key-point">
-                    <strong>Learning Focus:</strong> Configuration management, data persistence, resource optimization, and application reliability
+                    <strong>Learning Focus:</strong> Microservices deployment, package management, configuration, data persistence, and application reliability
                 </div>
             </section>
 
@@ -302,6 +305,131 @@
                         </ul>
                     </li>
                 </ul>
+            </section>
+
+            <!-- Microservices Deployment Lab -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Hands-On: Deploying Microservices to EKS</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Deploy NodeJS backend API with database connectivity</li>
+                        <li>Deploy Crystal backend API with different configurations</li>
+                        <li>Create frontend application connecting to backend services</li>
+                        <li>Test end-to-end application functionality</li>
+                        <li>Scale individual microservices independently</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Multi-tier applications, service communication, independent scaling</p>
+                </div>
+            </section>
+
+            <!-- Microservices Deployment Architecture -->
+            <section>
+                <h2>Microservices Deployment Strategy</h2>
+                <div class="key-point">
+                    <h4>Real-World Application Stack:</h4>
+                    <ul>
+                        <li><strong>Frontend:</strong> React/Vue.js application (Nginx container)</li>
+                        <li><strong>NodeJS Backend:</strong> REST API with Express framework</li>
+                        <li><strong>Crystal Backend:</strong> High-performance API service</li>
+                        <li><strong>Database Layer:</strong> Redis for session/cache management</li>
+                    </ul>
+                </div>
+                <div class="warning">
+                    <h4>Deployment Considerations:</h4>
+                    <ul class="smaller">
+                        <li>Each service in separate deployments</li>
+                        <li>Different resource requirements per service</li>
+                        <li>Service-to-service communication via Kubernetes DNS</li>
+                        <li>Independent scaling based on load patterns</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Helm Package Management -->
+            <section>
+                <h2>Helm Package Management</h2>
+                <div class="key-point">
+                    <h3>What is Helm?</h3>
+                    <ul>
+                        <li><strong>Package Manager:</strong> Like APT/YUM for Kubernetes</li>
+                        <li><strong>Templating Engine:</strong> Parameterized YAML configurations</li>
+                        <li><strong>Release Management:</strong> Versioning and rollbacks</li>
+                        <li><strong>Dependency Management:</strong> Handle complex application dependencies</li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- Helm Concepts -->
+            <section>
+                <h2>Helm Concepts</h2>
+                <ul>
+                    <li><strong>Charts</strong>
+                        <ul class="smaller">
+                            <li>Helm packages containing Kubernetes manifests</li>
+                            <li>Templates with configurable values</li>
+                            <li>Stored in repositories (local or remote)</li>
+                        </ul>
+                    </li>
+                    <li><strong>Releases</strong>
+                        <ul class="smaller">
+                            <li>Deployed instances of charts</li>
+                            <li>Managed lifecycle (install, upgrade, rollback)</li>
+                            <li>Release history and versioning</li>
+                        </ul>
+                    </li>
+                    <li><strong>Values</strong>
+                        <ul class="smaller">
+                            <li>Configuration parameters for charts</li>
+                            <li>Override default settings</li>
+                            <li>Environment-specific customization</li>
+                        </ul>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- Helm Deployment Lab -->
+            <section class="center">
+                <div class="lab-callout">
+                    <h2>🔬 Hands-On: Application Deployment with Helm</h2>
+                    <h3>Duration: 45 minutes</h3>
+                    <p><strong>Objectives:</strong></p>
+                    <ul style="text-align: left; display: inline-block;">
+                        <li>Search and explore available Helm charts</li>
+                        <li>Deploy applications using existing Helm charts</li>
+                        <li>Customize deployments using values files</li>
+                        <li>Upgrade and rollback Helm releases</li>
+                        <li>Create a simple custom Helm chart</li>
+                    </ul>
+                    <p><strong>Key Skills:</strong> Package management, templating, release management</p>
+                </div>
+            </section>
+
+            <!-- Helm Common Commands -->
+            <section>
+                <h2>Common Helm Commands</h2>
+                <div class="yaml-block">
+# Search for charts
+helm search repo redis
+helm search hub wordpress
+
+# Install applications
+helm install my-redis bitnami/redis
+helm install my-app ./my-chart
+
+# List releases
+helm list
+
+# Upgrade releases
+helm upgrade my-redis bitnami/redis --version 18.0.0
+
+# Rollback releases
+helm rollback my-redis 1
+
+# Uninstall releases
+helm uninstall my-redis
+                </div>
             </section>
 
             <!-- ConfigMaps and Secrets -->
