@@ -87,22 +87,22 @@
             <!-- Kubernetes Architecture -->
             <section>
                 <h2>Kubernetes Architecture</h2>
-                <div class="architecture-diagram">
-                    <div class="code-block">
-                    CONTROL PLANE
-    [API Server]  [etcd]  [Scheduler]
-    [Controller Manager]  [Cloud Controller]
-                         |
-            +------------+------------+
-            |            |            |
-       Worker Node   Worker Node   Worker Node
-       [kubelet]     [kubelet]     [kubelet]
-       [Pod Pod]     [Pod Pod]     [Pod Pod]
+                <div class="key-point">
+                    <h3 style="text-align: center; margin: 20px 0;">CONTROL PLANE (Managed)</h3>
+                    <div style="text-align: center; font-size: 1.2em; margin: 15px 0;">
+                        <strong>API Server</strong> • <strong>etcd</strong> • <strong>Scheduler</strong> • <strong>Controllers</strong>
+                    </div>
+                    <div style="text-align: center; font-size: 2em; margin: 10px 0;">↓</div>
+                    <h3 style="text-align: center; margin: 20px 0;">WORKER NODES</h3>
+                    <div style="text-align: center; font-size: 1.1em; margin: 15px 0;">
+                        <strong>Node 1:</strong> kubelet + Pods &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>Node 2:</strong> kubelet + Pods &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>Node 3:</strong> kubelet + Pods
                     </div>
                 </div>
             </section>
 
-            <!-- Control Plane Components -->
+            <!-- Control Plane Components - Part 1 -->
             <section>
                 <h2>Control Plane Components</h2>
                 <ul>
@@ -120,6 +120,13 @@
                             <li>Highly available and consistent</li>
                         </ul>
                     </li>
+                </ul>
+            </section>
+
+            <!-- Control Plane Components - Part 2 -->
+            <section>
+                <h2>Control Plane Components (cont.)</h2>
+                <ul>
                     <li><strong>Scheduler</strong>
                         <ul class="smaller">
                             <li>Assigns pods to nodes</li>
@@ -165,7 +172,7 @@
                 </ul>
             </section>
 
-            <!-- Kubernetes Objects -->
+            <!-- Kubernetes Objects - Part 1 -->
             <section>
                 <h2>Core Kubernetes Objects</h2>
                 <ul>
@@ -183,6 +190,13 @@
                             <li>ClusterIP, NodePort, LoadBalancer types</li>
                         </ul>
                     </li>
+                </ul>
+            </section>
+
+            <!-- Kubernetes Objects - Part 2 -->
+            <section>
+                <h2>Core Kubernetes Objects (cont.)</h2>
+                <ul>
                     <li><strong>Deployment</strong>
                         <ul class="smaller">
                             <li>Manages replica sets and pods</li>
@@ -238,11 +252,13 @@
             <!-- Pod Lifecycle -->
             <section>
                 <h2>Pod Lifecycle</h2>
-                <div class="architecture-diagram">
-                    <div class="code-block">
-    Pending --> Running --> Succeeded/Failed
-       |           |              |
-   Scheduled     Ready       Terminated
+                <div class="key-point">
+                    <div style="text-align: center; font-size: 1.3em; margin: 20px 0;">
+                        <strong>Pending</strong>
+                        <span style="font-size: 1.5em; margin: 0 15px;">→</span>
+                        <strong>Running</strong>
+                        <span style="font-size: 1.5em; margin: 0 15px;">→</span>
+                        <strong>Succeeded/Failed</strong>
                     </div>
                 </div>
                 <ul>
@@ -250,13 +266,12 @@
                     <li><strong>Running:</strong> Bound to node, at least one container running</li>
                     <li><strong>Succeeded:</strong> All containers terminated successfully</li>
                     <li><strong>Failed:</strong> All containers terminated, at least one failed</li>
-                    <li><strong>Unknown:</strong> Pod state cannot be determined</li>
                 </ul>
             </section>
 
-            <!-- Services Overview -->
+            <!-- Service Types - Part 1 -->
             <section>
-                <h2>Services Overview</h2>
+                <h2>Service Types</h2>
                 <ul>
                     <li><strong>ClusterIP (Default)</strong>
                         <ul class="smaller">
@@ -272,6 +287,13 @@
                             <li>External access through any node</li>
                         </ul>
                     </li>
+                </ul>
+            </section>
+
+            <!-- Service Types - Part 2 -->
+            <section>
+                <h2>Service Types (cont.)</h2>
+                <ul>
                     <li><strong>LoadBalancer</strong>
                         <ul class="smaller">
                             <li>Cloud provider's load balancer</li>
@@ -411,17 +433,20 @@ spec:
             <!-- EKS Architecture -->
             <section>
                 <h2>EKS Architecture</h2>
-                <div class="architecture-diagram">
-                    <div class="code-block smaller">
-                AWS Cloud
-        EKS Control Plane (Managed)
-    [AZ1: API+etcd] [AZ2: API+etcd] [AZ3: API+etcd]
-                         |
-            +------------+------------+
-            |            |            |
-     Worker Node    Worker Node    Worker Node
-    (EC2/Fargate)  (EC2/Fargate)  (EC2/Fargate)
-      [Pods]         [Pods]         [Pods]
+                <div class="warning">
+                    <h3 style="text-align: center; margin: 20px 0;">☁️ AWS CLOUD</h3>
+                    <h4 style="text-align: center; color: #2980b9; margin: 15px 0;">EKS Control Plane (AWS Managed)</h4>
+                    <div style="text-align: center; font-size: 1.1em; margin: 15px 0;">
+                        <strong>AZ1:</strong> API+etcd &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>AZ2:</strong> API+etcd &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>AZ3:</strong> API+etcd
+                    </div>
+                    <div style="text-align: center; font-size: 2em; margin: 15px 0;">↓</div>
+                    <h4 style="text-align: center; color: #27ae60; margin: 15px 0;">Worker Nodes (Your Account)</h4>
+                    <div style="text-align: center; font-size: 1.0em; margin: 10px 0;">
+                        <strong>EC2/Fargate</strong> + Pods &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>EC2/Fargate</strong> + Pods &nbsp;&nbsp;|&nbsp;&nbsp;
+                        <strong>EC2/Fargate</strong> + Pods
                     </div>
                 </div>
             </section>
@@ -709,29 +734,18 @@ spec:
             <!-- Rolling Updates -->
             <section>
                 <h2>Rolling Updates</h2>
-                <div class="architecture-diagram">
-                    <div class="code-block smaller">
-Step 1: [Old] [Old] [Old]
-Step 2: [Old] [Old] [New]
-Step 3: [Old] [New] [New]
-Step 4: [New] [New] [New]
+                <div class="key-point">
+                    <div style="font-size: 1.1em; line-height: 1.8;">
+                        <div><strong>Step 1:</strong> Old &nbsp; Old &nbsp; Old</div>
+                        <div><strong>Step 2:</strong> Old &nbsp; Old &nbsp; <span style="color: #27ae60;">New</span></div>
+                        <div><strong>Step 3:</strong> Old &nbsp; <span style="color: #27ae60;">New</span> &nbsp; <span style="color: #27ae60;">New</span></div>
+                        <div><strong>Step 4:</strong> <span style="color: #27ae60;">New</span> &nbsp; <span style="color: #27ae60;">New</span> &nbsp; <span style="color: #27ae60;">New</span></div>
                     </div>
                 </div>
                 <ul>
-                    <li><strong>Controlled Rollout</strong>
-                        <ul class="smaller">
-                            <li>Gradual replacement of pods</li>
-                            <li>Health checks before proceeding</li>
-                            <li>Automatic rollback on failure</li>
-                        </ul>
-                    </li>
-                    <li><strong>Configuration Options</strong>
-                        <ul class="smaller">
-                            <li>maxSurge: Extra pods during update</li>
-                            <li>maxUnavailable: Pods that can be down</li>
-                            <li>progressDeadlineSeconds: Timeout</li>
-                        </ul>
-                    </li>
+                    <li><strong>Controlled Rollout:</strong> Gradual replacement with health checks</li>
+                    <li><strong>Zero Downtime:</strong> Always maintains available instances</li>
+                    <li><strong>Automatic Rollback:</strong> On failure detection</li>
                 </ul>
             </section>
 

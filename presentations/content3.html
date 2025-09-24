@@ -87,22 +87,23 @@
             <!-- Kubernetes Security Model -->
             <section>
                 <h2>Kubernetes Security Model</h2>
-                <div class="architecture-diagram">
-                    <div class="code-block smaller">
-                API Server
-    [Authentication] [Authorization] [Admission]
-         (AuthN)         (AuthZ)      Control
-            |               |            |
-            v               v            v
-       Who are you?   What can you do? Is it allowed?
-         - Certificates   - RBAC           - Policies
-         - Tokens        - ABAC           - Quotas
-         - Identity      - Webhook        - Security
+                <div class="key-point">
+                    <h4 style="text-align: center; margin: 20px 0;">API Server Security Pipeline</h4>
+                    <div style="text-align: center; font-size: 1.1em; margin: 20px 0;">
+                        <strong style="color: #3498db;">Authentication</strong>
+                        <span style="font-size: 1.5em; margin: 0 15px;">→</span>
+                        <strong style="color: #e67e22;">Authorization</strong>
+                        <span style="font-size: 1.5em; margin: 0 15px;">→</span>
+                        <strong style="color: #27ae60;">Admission Control</strong>
+                    </div>
+                    <div style="text-align: center; font-size: 0.9em; margin: 15px 0;">
+                        <div><strong>Who are you?</strong> &nbsp;&nbsp;&nbsp; <strong>What can you do?</strong> &nbsp;&nbsp;&nbsp; <strong>Is it allowed?</strong></div>
+                        <div style="margin-top: 10px;">Certificates, Tokens &nbsp;&nbsp;&nbsp; RBAC, ABAC &nbsp;&nbsp;&nbsp; Policies, Quotas</div>
                     </div>
                 </div>
             </section>
 
-            <!-- Authentication in Kubernetes -->
+            <!-- Authentication Methods - Part 1 -->
             <section>
                 <h2>Authentication in Kubernetes</h2>
                 <ul>
@@ -120,6 +121,13 @@
                             <li>Bootstrap tokens</li>
                         </ul>
                     </li>
+                </ul>
+            </section>
+
+            <!-- Authentication Methods - Part 2 -->
+            <section>
+                <h2>Authentication in Kubernetes (cont.)</h2>
+                <ul>
                     <li><strong>OpenID Connect (OIDC)</strong>
                         <ul class="smaller">
                             <li>Integration with identity providers</li>
