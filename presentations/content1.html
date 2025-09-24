@@ -4,22 +4,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/theme/white.css">
     <style>
-        .reveal { font-size: 28px; }
+        .reveal { font-size: 36px; }
         .reveal h1 { font-size: 2.2em; color: #2c3e50; }
         .reveal h2 { font-size: 1.8em; color: #2c3e50; }
         .reveal h3 { font-size: 1.4em; color: #2c3e50; }
         .reveal .slides section { text-align: left; }
         .reveal .slides section.center { text-align: center; }
         .lab-callout { background: #3498db; color: white; padding: 15px; border-radius: 8px; margin: 15px 0; }
-        .code-block { background: #f8f9fa; padding: 10px; border-left: 4px solid #007cba; font-family: monospace; font-size: 0.65em; line-height: 1.2; }
+        .code-block { background: #f8f9fa; padding: 15px; border-left: 4px solid #007cba; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.5; white-space: pre; margin: 15px 0; }
+        .yaml-block { background: #263238; color: #eeffff; padding: 20px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; line-height: 1.8; white-space: pre; overflow-x: auto; margin: 15px 0; }
+        .yaml-key { color: #82b1ff; }
+        .yaml-value { color: #c3e88d; }
+        .yaml-string { color: #f78c6c; }
         .architecture-diagram { text-align: center; margin: 15px 0; }
         .key-point { background: #e8f5e8; padding: 8px; border-left: 4px solid #27ae60; margin: 8px 0; }
         .warning { background: #fdf2e9; padding: 8px; border-left: 4px solid #e67e22; margin: 8px 0; }
-        .small { font-size: 0.75em; }
-        .smaller { font-size: 0.65em; }
-        .reveal ul { margin: 0.5em 0; }
-        .reveal li { margin: 0.3em 0; }
-        .reveal p { margin: 0.5em 0; }
+        .small { font-size: 0.85em; }
+        .smaller { font-size: 0.8em; }
+        .reveal ul { margin: 0.8em 0; }
+        .reveal li { margin: 0.5em 0; }
+        .reveal p { margin: 0.8em 0; }
     </style>
 </head>
 <body>
@@ -199,26 +203,26 @@
             <!-- Pod Deep Dive -->
             <section>
                 <h2>Pod Deep Dive</h2>
-                <div class="code-block">
-apiVersion: v1
-kind: Pod
-metadata:
-  name: example-pod
-  labels:
-    app: web
-spec:
-  containers:
-  - name: web-server
-    image: nginx:1.21
-    ports:
-    - containerPort: 80
-    resources:
-      requests:
-        memory: "64Mi"
-        cpu: "250m"
-      limits:
-        memory: "128Mi"
-        cpu: "500m"
+                <div class="yaml-block">
+<span class="yaml-key">apiVersion:</span> <span class="yaml-value">v1</span>
+<span class="yaml-key">kind:</span> <span class="yaml-value">Pod</span>
+<span class="yaml-key">metadata:</span>
+  <span class="yaml-key">name:</span> <span class="yaml-value">example-pod</span>
+  <span class="yaml-key">labels:</span>
+    <span class="yaml-key">app:</span> <span class="yaml-value">web</span>
+<span class="yaml-key">spec:</span>
+  <span class="yaml-key">containers:</span>
+  - <span class="yaml-key">name:</span> <span class="yaml-value">web-server</span>
+    <span class="yaml-key">image:</span> <span class="yaml-value">nginx:1.21</span>
+    <span class="yaml-key">ports:</span>
+    - <span class="yaml-key">containerPort:</span> <span class="yaml-value">80</span>
+    <span class="yaml-key">resources:</span>
+      <span class="yaml-key">requests:</span>
+        <span class="yaml-key">memory:</span> <span class="yaml-string">"64Mi"</span>
+        <span class="yaml-key">cpu:</span> <span class="yaml-string">"250m"</span>
+      <span class="yaml-key">limits:</span>
+        <span class="yaml-key">memory:</span> <span class="yaml-string">"128Mi"</span>
+        <span class="yaml-key">cpu:</span> <span class="yaml-string">"500m"</span>
                 </div>
                 <div class="key-point">
                     <strong>Key Characteristics:</strong>
@@ -610,7 +614,7 @@ resources:
             <!-- Service Types Deep Dive -->
             <section>
                 <h2>Service Types Deep Dive</h2>
-                <div class="code-block smaller">
+                <div class="yaml-block">
 # ClusterIP Service
 apiVersion: v1
 kind: Service
