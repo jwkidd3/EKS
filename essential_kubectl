@@ -3,8 +3,18 @@ kubectl logs
 kubectl describe
 kubectl exec -it podname -- command 
 kubectl apply -f file.yaml
-
-
+kubectl delete all --all
+kubectl get endpoints
+kubectl get nodes --show-labels
+kubectl logs
 
 common command line switches:
 -o yaml|json
+
+
+# Check for resource pressure on nodes
+kubectl describe nodes | grep -A 10 -B 5 "Conditions"
+
+
+# Analyze resource requests vs limits
+kubectl get pods -o json | jq '.items[] | {name: .metadata.name, requests: .spec.containers[].resources.requests, limits: .spec.containers[].resources.limits}'
